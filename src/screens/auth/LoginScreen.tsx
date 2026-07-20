@@ -1,197 +1,178 @@
 import React, { useState } from 'react';
-
 import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
+import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 
-import Button from '../../components/ui/Button';
-import Input from '../../components/ui/Input';
-
-import { COLORS } from '../../constants/colors';
-
-interface Props {
-  onRegister: () => void;
-  onLoginSuccess: () => void;
-}
-
-const LoginScreen: React.FC<Props> = ({
-  onRegister,
-  onLoginSuccess,
-}) => {
-  const [mobile, setMobile] = useState('');
+const LoginScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const { login } = useAuth();
+  const { t } = useLanguage();
 
-  const handleLogin = () => {
-    if (!mobile || !password) {
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert('Error', 'Please fill all fields');
       return;
     }
 
-    // Temporary frontend flow.
-    // Actual offline authentication Yash integrate karel.
-
-    onLoginSuccess();
+    setIsLoading(true);
+    try {
+      console.log('Attempting login...');
+      const success = await login(email, password);
+      
+      if (success) {
+        console.log('Login successful!');
+        // Navigation will happen automatically via AuthContext
+      } else {
+        Alert.alert('Login Failed', 'Invalid email or password. Please try again.\n\n💡 Demo credentials:\nadmin@sscboard.com / Admin@123');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      Alert.alert('Login Failed', 'An error occurred. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <View style={styles.content}>
+        <Text style={styles.title}>📚 SSC Board App</Text>
+        <Text style={styles.subtitle}>Maharashtra Board Learning</Text>
 
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={
-          Platform.OS === 'ios'
-            ? 'padding'
-            : undefined
-        }
-      >
+        <View style={styles.demoInfo}>
+          <Text style={styles.demoText}>💡 Demo Credentials:</Text>
+          <Text style={styles.demoCreds}>📧 admin@sscboard.com</Text>
+          <Text style={styles.demoCreds}>🔑 Admin@123</Text>
+          <Text style={styles.demoNote}>Or register a new account below</Text>
+        </View>
 
-        <ScrollView
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
+        <TextInput
+          style={styles.input}
+          placeholder={t('email') || 'Email'}
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
+          keyboardType="email-address"
+        />
+
+        <TextInput
+          style={styles.input}
+          placeholder={t('password') || 'Password'}
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+        />
+
+        <TouchableOpacity 
+          style={styles.button} 
+          onPress={handleLogin} 
+          disabled={isLoading}
         >
+          {isLoading ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <Text style={styles.buttonText}>{t('login') || 'Login'}</Text>
+          )}
+        </TouchableOpacity>
 
-          <View style={styles.logo}>
-            <Text style={styles.logoText}>
-              SSC
-            </Text>
-          </View>
+        <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+          <Text style={styles.link}>Don't have an account? Register</Text>
+        </TouchableOpacity>
 
-          <Text style={styles.title}>
-            Welcome Back!
-          </Text>
-
-          <Text style={styles.subtitle}>
-            Login to continue your learning journey
-          </Text>
-
-          <Input
-            label="Mobile Number"
-            placeholder="Enter your mobile number"
-            keyboardType="phone-pad"
-            maxLength={10}
-            value={mobile}
-            onChangeText={setMobile}
-          />
-
-          <Input
-            label="Password"
-            placeholder="Enter your password"
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
-          />
-
-          <TouchableOpacity
-            style={styles.forgot}
-          >
-            <Text style={styles.forgotText}>
-              Forgot Password?
-            </Text>
-          </TouchableOpacity>
-
-          <Button
-            title="Login"
-            onPress={handleLogin}
-            disabled={!mobile || !password}
-          />
-
-          <View style={styles.registerRow}>
-
-            <Text style={styles.registerText}>
-              Don't have an account?{' '}
-            </Text>
-
-            <TouchableOpacity
-              onPress={onRegister}
-            >
-              <Text style={styles.registerLink}>
-                Register
-              </Text>
-            </TouchableOpacity>
-
-          </View>
-
-        </ScrollView>
-
-      </KeyboardAvoidingView>
-
-    </SafeAreaView>
+        <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
+          <Text style={styles.link}>Forgot Password?</Text>
+        </TouchableOpacity>
+      </View>
+    </KeyboardAvoidingView>
   );
 };
-
-export default LoginScreen;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: '#f5f5f5',
   },
-
   content: {
-    flexGrow: 1,
+    flex: 1,
     justifyContent: 'center',
-    padding: 24,
+    padding: 20,
   },
-
-  logo: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    backgroundColor: COLORS.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'center',
-    marginBottom: 25,
-  },
-
-  logoText: {
-    color: COLORS.white,
-    fontSize: 28,
-    fontWeight: '800',
-  },
-
   title: {
-    fontSize: 30,
-    fontWeight: '700',
+    fontSize: 32,
+    fontWeight: 'bold',
     textAlign: 'center',
-    color: COLORS.textPrimary,
+    marginBottom: 10,
+    color: '#007AFF',
   },
-
   subtitle: {
+    fontSize: 16,
     textAlign: 'center',
-    color: COLORS.textSecondary,
-    marginTop: 10,
-    marginBottom: 35,
+    marginBottom: 30,
+    color: '#666',
   },
-
-  forgot: {
-    alignSelf: 'flex-end',
-    marginBottom: 24,
+  demoInfo: {
+    backgroundColor: '#E8F4FD',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 20,
   },
-
-  forgotText: {
-    color: COLORS.primary,
+  demoText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#007AFF',
+    marginBottom: 5,
+  },
+  demoCreds: {
+    fontSize: 14,
+    color: '#333',
+    marginTop: 3,
+  },
+  demoNote: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 8,
+    fontStyle: 'italic',
+  },
+  input: {
+    backgroundColor: 'white',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  button: {
+    backgroundColor: '#007AFF',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 15,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: 'white',
+    fontSize: 16,
     fontWeight: '600',
   },
-
-  registerRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 28,
-  },
-
-  registerText: {
-    color: COLORS.textSecondary,
-  },
-
-  registerLink: {
-    color: COLORS.primary,
-    fontWeight: '700',
+  link: {
+    color: '#007AFF',
+    textAlign: 'center',
+    marginTop: 10,
   },
 });
+
+export default LoginScreen;

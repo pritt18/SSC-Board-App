@@ -1,152 +1,71 @@
-import React, {
-  useEffect,
-  useState,
-} from 'react';
+import React, { useEffect, useState } from 'react';
+import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { NavigationContainer } from '@react-navigation/native';
+import { AuthProvider } from './src/context/AuthContext';
+import { LanguageProvider } from './src/context/LanguageContext';
+import AppNavigator from './src/navigation/AppNavigator';
+import { initializeDatabase } from './src/database/database';
+import { seedDatabase } from './src/database/seeders/seedDatabase';
+import { LogBox, View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 
-import {
-  StatusBar,
-  StyleSheet,
-  View,
-} from 'react-native';
-
-import SplashScreen from './src/screens/splash/SplashScreen';
-
-import LanguageSelectionScreen from './src/screens/language/LanguageSelectionScreen';
-
-import LoginScreen from './src/screens/auth/LoginScreen';
-
-import RegisterScreen from './src/screens/auth/RegisterScreen';
-
-import LicenseActivationScreen from './src/screens/license/LicenseActivationScreen';
-
-import DashboardScreen from './src/screens/student/dashboard/DashboardScreen';
-
-import { COLORS } from './src/constants/colors';
-
-type Screen =
-  | 'splash'
-  | 'language'
-  | 'login'
-  | 'register'
-  | 'license'
-  | 'dashboard';
+// Ignore specific warnings
+LogBox.ignoreAllLogs();
 
 export default function App() {
-  const [
-    currentScreen,
-    setCurrentScreen,
-  ] = useState<Screen>('splash');
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setCurrentScreen('language');
-    }, 2500);
-
-    return () => {
-      clearTimeout(timer);
+    const setupDatabase = async () => {
+      try {
+        console.log('Initializing database...');
+        await initializeDatabase();
+        console.log('Seeding database...');
+        await seedDatabase();
+        console.log('✅ Database initialized successfully');
+      } catch (error) {
+        console.error('❌ Database initialization failed:', error);
+      } finally {
+        setIsReady(true);
+      }
     };
+
+    setupDatabase();
   }, []);
 
-  const renderScreen = () => {
-    switch (currentScreen) {
-
-      case 'splash':
-
-        return (
-          <SplashScreen />
-        );
-
-      case 'language':
-
-        return (
-          <LanguageSelectionScreen
-            onContinue={() =>
-              setCurrentScreen('login')
-            }
-          />
-        );
-
-      case 'login':
-
-        return (
-          <LoginScreen
-            onRegister={() =>
-              setCurrentScreen('register')
-            }
-
-            onLoginSuccess={() =>
-              setCurrentScreen('license')
-            }
-          />
-        );
-
-      case 'register':
-
-        return (
-          <RegisterScreen
-            onLogin={() =>
-              setCurrentScreen('login')
-            }
-
-            onRegisterSuccess={() =>
-              setCurrentScreen('license')
-            }
-          />
-        );
-
-      case 'license':
-
-        return (
-          <LicenseActivationScreen
-            onActivated={() =>
-              setCurrentScreen('dashboard')
-            }
-          />
-        );
-
-      case 'dashboard':
-
-        return (
-          <DashboardScreen />
-        );
-
-      default:
-
-        return (
-          <SplashScreen />
-        );
-    }
-  };
-
-  const isSplash =
-    currentScreen === 'splash';
+  if (!isReady) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#007AFF" />
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
 
   return (
-    <View style={styles.container}>
-
-      <StatusBar
-        barStyle={
-          isSplash
-            ? 'light-content'
-            : 'dark-content'
-        }
-
-        backgroundColor={
-          isSplash
-            ? COLORS.primary
-            : COLORS.background
-        }
-      />
-
-      {renderScreen()}
-
-    </View>
+    <SafeAreaProvider>
+      <StatusBar style="auto" />
+      <LanguageProvider>
+        <AuthProvider>
+          <NavigationContainer>
+            <AppNavigator />
+          </NavigationContainer>
+        </AuthProvider>
+      </LanguageProvider>
+    </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  loadingContainer: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
   },
 });

@@ -1,291 +1,130 @@
 import React from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { useAuth } from '../../../context/AuthContext';
+import { useLanguage } from '../../../context/LanguageContext';
 
-import {
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+const DashboardScreen: React.FC = () => {
+  const { user } = useAuth();
+  const { t } = useLanguage();
 
-import Card from '../../../components/ui/Card';
-
-import { COLORS } from '../../../constants/colors';
-
-const DashboardScreen = () => {
   return (
-    <SafeAreaView style={styles.container}>
+    <ScrollView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.welcome}>Welcome, {user?.full_name || 'Student'}!</Text>
+        <Text style={styles.subtitle}>{t('dashboard')}</Text>
+      </View>
 
-      <ScrollView
-        contentContainerStyle={styles.content}
-      >
-
-        <View style={styles.header}>
-
-          <View>
-
-            <Text style={styles.greeting}>
-              Hello, Student 👋
-            </Text>
-
-            <Text style={styles.subtitle}>
-              Continue your learning journey
-            </Text>
-
-          </View>
-
-          <View style={styles.profile}>
-
-            <Text style={styles.profileText}>
-              S
-            </Text>
-
-          </View>
-
+      <View style={styles.statsContainer}>
+        <View style={styles.statCard}>
+          <Text style={styles.statNumber}>0</Text>
+          <Text style={styles.statLabel}>Chapters Completed</Text>
         </View>
-
-        <Card style={styles.continueCard}>
-
-          <Text style={styles.cardLabel}>
-            CONTINUE LEARNING
-          </Text>
-
-          <Text style={styles.cardTitle}>
-            Mathematics
-          </Text>
-
-          <Text style={styles.cardSubtitle}>
-            Chapter 1
-          </Text>
-
-        </Card>
-
-        <Text style={styles.sectionTitle}>
-          My Learning
-        </Text>
-
-        <View style={styles.grid}>
-
-          <Card style={styles.gridCard}>
-
-            <Text style={styles.gridIcon}>
-              📚
-            </Text>
-
-            <Text style={styles.gridTitle}>
-              My Classes
-            </Text>
-
-          </Card>
-
-          <Card style={styles.gridCard}>
-
-            <Text style={styles.gridIcon}>
-              📝
-            </Text>
-
-            <Text style={styles.gridTitle}>
-              Quizzes
-            </Text>
-
-          </Card>
-
-          <Card style={styles.gridCard}>
-
-            <Text style={styles.gridIcon}>
-              📊
-            </Text>
-
-            <Text style={styles.gridTitle}>
-              Progress
-            </Text>
-
-          </Card>
-
-          <Card style={styles.gridCard}>
-
-            <Text style={styles.gridIcon}>
-              🏆
-            </Text>
-
-            <Text style={styles.gridTitle}>
-              Achievements
-            </Text>
-
-          </Card>
-
+        <View style={styles.statCard}>
+          <Text style={styles.statNumber}>0%</Text>
+          <Text style={styles.statLabel}>Progress</Text>
         </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statNumber}>0</Text>
+          <Text style={styles.statLabel}>Quiz Score</Text>
+        </View>
+      </View>
 
-        <Text style={styles.sectionTitle}>
-          Today's Progress
-        </Text>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Continue Learning</Text>
+        <TouchableOpacity style={styles.card}>
+          <Text style={styles.cardTitle}>No active courses</Text>
+          <Text style={styles.cardSubtitle}>Start learning today!</Text>
+        </TouchableOpacity>
+      </View>
 
-        <Card>
-
-          <View style={styles.progressRow}>
-
-            <View>
-
-              <Text style={styles.progressNumber}>
-                45 min
-              </Text>
-
-              <Text style={styles.progressLabel}>
-                Study Time
-              </Text>
-
-            </View>
-
-            <View>
-
-              <Text style={styles.progressNumber}>
-                3
-              </Text>
-
-              <Text style={styles.progressLabel}>
-                Chapters
-              </Text>
-
-            </View>
-
-            <View>
-
-              <Text style={styles.progressNumber}>
-                80%
-              </Text>
-
-              <Text style={styles.progressLabel}>
-                Quiz Score
-              </Text>
-
-            </View>
-
-          </View>
-
-        </Card>
-
-      </ScrollView>
-
-    </SafeAreaView>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Recent Activity</Text>
+        <TouchableOpacity style={styles.card}>
+          <Text style={styles.cardTitle}>Welcome to SSC Board App</Text>
+          <Text style={styles.cardSubtitle}>Explore your learning journey</Text>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
   );
 };
-
-export default DashboardScreen;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: '#f5f5f5',
   },
-
-  content: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 30,
+    backgroundColor: '#007AFF',
+    padding: 20,
+    paddingTop: 40,
   },
-
-  greeting: {
+  welcome: {
     fontSize: 24,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
+    fontWeight: 'bold',
+    color: 'white',
   },
-
   subtitle: {
-    color: COLORS.textSecondary,
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.8)',
     marginTop: 5,
   },
-
-  profile: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: COLORS.primary,
+  statsContainer: {
+    flexDirection: 'row',
+    padding: 15,
+    marginTop: -30,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: 'white',
+    borderRadius: 10,
+    padding: 15,
+    marginHorizontal: 5,
     alignItems: 'center',
-    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-
-  profileText: {
-    color: COLORS.white,
-    fontWeight: '700',
-    fontSize: 18,
+  statNumber: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#007AFF',
   },
-
-  continueCard: {
-    backgroundColor: COLORS.primary,
-  },
-
-  cardLabel: {
-    color: COLORS.white,
+  statLabel: {
     fontSize: 12,
-    fontWeight: '600',
-    opacity: 0.8,
-  },
-
-  cardTitle: {
-    color: COLORS.white,
-    fontSize: 22,
-    fontWeight: '700',
-    marginTop: 12,
-  },
-
-  cardSubtitle: {
-    color: COLORS.white,
+    color: '#666',
     marginTop: 5,
-    opacity: 0.9,
+    textAlign: 'center',
   },
-
+  section: {
+    padding: 15,
+  },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-    marginTop: 30,
-    marginBottom: 15,
-  },
-
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    rowGap: 15,
-  },
-
-  gridCard: {
-    width: '47%',
-    alignItems: 'center',
-  },
-
-  gridIcon: {
-    fontSize: 32,
-  },
-
-  gridTitle: {
-    color: COLORS.textPrimary,
-    fontWeight: '600',
-    marginTop: 10,
-  },
-
-  progressRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-
-  progressNumber: {
     fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.primary,
-    textAlign: 'center',
+    fontWeight: '600',
+    marginBottom: 10,
   },
-
-  progressLabel: {
-    color: COLORS.textSecondary,
-    fontSize: 12,
+  card: {
+    backgroundColor: 'white',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  cardSubtitle: {
+    fontSize: 14,
+    color: '#666',
     marginTop: 5,
-    textAlign: 'center',
   },
 });
+
+export default DashboardScreen;

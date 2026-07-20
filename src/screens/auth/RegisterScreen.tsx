@@ -1,147 +1,181 @@
 import React, { useState } from 'react';
-
 import {
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
   View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
+  ActivityIndicator,
+  ScrollView,
 } from 'react-native';
+import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 
-import Button from '../../components/ui/Button';
-import Input from '../../components/ui/Input';
-
-import { COLORS } from '../../constants/colors';
-
-interface Props {
-  onLogin: () => void;
-  onRegisterSuccess: () => void;
-}
-
-const RegisterScreen: React.FC<Props> = ({
-  onLogin,
-  onRegisterSuccess,
-}) => {
-  const [name, setName] = useState('');
-  const [mobile, setMobile] = useState('');
+const RegisterScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const { register } = useAuth();
+  const { t } = useLanguage();
 
-  const valid =
-    name.trim() !== '' &&
-    mobile.trim() !== '' &&
-    password.trim() !== '';
+  const handleRegister = async () => {
+    if (!username || !email || !password || !fullName) {
+      Alert.alert('Error', 'Please fill all fields');
+      return;
+    }
+
+    if (password.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      console.log('Attempting registration...');
+      const success = await register({
+        username,
+        email,
+        password,
+        full_name: fullName,
+        role: 'student',
+        medium: 'english',
+      });
+      
+      if (success) {
+        console.log('Registration successful!');
+        Alert.alert('Success', 'Account created successfully!');
+        // Navigation will happen automatically via AuthContext
+      } else {
+        Alert.alert('Registration Failed', 'Email or username already exists. Please try again.');
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      Alert.alert('Registration Failed', 'Could not create account. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.content}>
+          <Text style={styles.title}>📚 Create Account</Text>
+          <Text style={styles.subtitle}>Join SSC Board Learning</Text>
 
-      <ScrollView
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-      >
+          <TextInput
+            style={styles.input}
+            placeholder="Full Name"
+            value={fullName}
+            onChangeText={setFullName}
+          />
 
-        <Text style={styles.title}>
-          Create Account
-        </Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Username"
+            value={username}
+            onChangeText={setUsername}
+            autoCapitalize="none"
+          />
 
-        <Text style={styles.subtitle}>
-          Start your learning journey today
-        </Text>
+          <TextInput
+            style={styles.input}
+            placeholder={t('email') || 'Email'}
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+          />
 
-        <Input
-          label="Full Name"
-          placeholder="Enter your full name"
-          value={name}
-          onChangeText={setName}
-        />
+          <TextInput
+            style={styles.input}
+            placeholder={t('password') || 'Password (min 6 chars)'}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+          />
 
-        <Input
-          label="Mobile Number"
-          placeholder="Enter mobile number"
-          keyboardType="phone-pad"
-          maxLength={10}
-          value={mobile}
-          onChangeText={setMobile}
-        />
-
-        <Input
-          label="Password"
-          placeholder="Create password"
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-        />
-
-        <Button
-          title="Create Account"
-          onPress={onRegisterSuccess}
-          disabled={!valid}
-        />
-
-        <View style={styles.loginRow}>
-
-          <Text style={styles.loginText}>
-            Already have an account?{' '}
-          </Text>
-
-          <TouchableOpacity
-            onPress={onLogin}
+          <TouchableOpacity 
+            style={styles.button} 
+            onPress={handleRegister} 
+            disabled={isLoading}
           >
-
-            <Text style={styles.loginLink}>
-              Login
-            </Text>
-
+            {isLoading ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text style={styles.buttonText}>Register</Text>
+            )}
           </TouchableOpacity>
 
+          <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+            <Text style={styles.link}>Already have an account? Login</Text>
+          </TouchableOpacity>
         </View>
-
       </ScrollView>
-
-    </SafeAreaView>
+    </KeyboardAvoidingView>
   );
 };
-
-export default RegisterScreen;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: '#f5f5f5',
   },
-
-  content: {
+  scrollContent: {
     flexGrow: 1,
+  },
+  content: {
+    flex: 1,
     justifyContent: 'center',
-    padding: 24,
+    padding: 20,
+    minHeight: 500,
   },
-
   title: {
-    fontSize: 30,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
+    fontSize: 32,
+    fontWeight: 'bold',
     textAlign: 'center',
+    marginBottom: 10,
+    color: '#007AFF',
   },
-
   subtitle: {
-    color: COLORS.textSecondary,
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 30,
+    color: '#666',
+  },
+  input: {
+    backgroundColor: 'white',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  button: {
+    backgroundColor: '#007AFF',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 15,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  link: {
+    color: '#007AFF',
     textAlign: 'center',
     marginTop: 10,
-    marginBottom: 35,
-  },
-
-  loginRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 28,
-  },
-
-  loginText: {
-    color: COLORS.textSecondary,
-  },
-
-  loginLink: {
-    color: COLORS.primary,
-    fontWeight: '700',
   },
 });
+
+export default RegisterScreen;

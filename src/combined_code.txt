@@ -1,0 +1,272 @@
+﻿D:\SSCBoardApp\src\components\cards\ChapterCard.tsx -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\components\cards\ClassCard.tsx -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\components\cards\SubjectCard.tsx -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\components\common\EmptyState.tsx -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\components\common\Header.tsx -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\components\common\Loader.tsx -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\components\ui\Button.tsx -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\components\ui\Card.tsx -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\components\ui\Input.tsx -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\constants\appConstants.ts -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\constants\colors.ts -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\constants\routes.ts -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\context\AuthContext.tsx -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\context\LanguageContext.tsx -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\data\classes.ts -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\data\languages.ts -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\database\models\Chapter.ts -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\database\models\Class.ts -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\database\models\Progress.ts -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\database\models\Quiz.ts -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\database\models\Subject.ts -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\database\models\User.ts -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\database\repositories\LearningRepository.ts -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\database\repositories\ProgressRepository.ts -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\database\repositories\UserRepository.ts -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\database\seeders\seedDatabase.ts -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\database\database.ts -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\database\migrations.ts -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\database\schema.ts -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\hooks\useAuth.ts -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\hooks\useDatabase.ts -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\navigation\AppNavigator.tsx -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\navigation\AuthNavigator.tsx -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\navigation\navigationTypes.ts -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\navigation\StudentNavigator.tsx -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\screens\auth\ForgotPasswordScreen.tsx -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\screens\auth\LoginScreen.tsx -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\screens\auth\RegisterScreen.tsx -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\screens\games\GamesScreen.tsx -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\screens\language\LanguageSelectionScreen.tsx -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\screens\learning\chapters\ChapterDetailScreen.tsx -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\screens\learning\chapters\ChapterListScreen.tsx -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\screens\learning\classes\ClassListScreen.tsx -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\screens\learning\pdfs\PdfViewerScreen.tsx -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\screens\learning\subjects\SubjectListScreen.tsx -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\screens\learning\videos\VideoPlayerScreen.tsx -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\screens\license\LicenseActivationScreen.tsx -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\screens\parent\ParentDashboardScreen.tsx -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\screens\progress\ProgressScreen.tsx -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\screens\quiz\QuizListScreen.tsx -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\screens\quiz\QuizResultScreen.tsx -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\screens\quiz\QuizScreen.tsx -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\screens\settings\SettingsScreen.tsx -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\screens\splash\SplashScreen.tsx -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\screens\student\dashboard\DashboardScreen.tsx -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\screens\student\profile\ProfileScreen.tsx -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\screens\teacher\TeacherDashboardScreen.tsx -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\services\authService.ts -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\services\contentService.ts -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\services\licenseService.ts -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\services\progressService.ts -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\storage\fileStorage.ts -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\storage\mmkvStorage.ts -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\types\learning.types.ts -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\types\navigation.types.ts -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\types\user.types.ts -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\utils\helpers.ts -
+-----------------------------------------------------------------
+
+
+D:\SSCBoardApp\src\utils\validators.ts -
+-----------------------------------------------------------------
+
+
