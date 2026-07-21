@@ -10,6 +10,7 @@ import {
 
 import Button from '../../components/ui/Button';
 import { COLORS } from '../../constants/colors';
+import { useLanguage } from '../../context/LanguageContext';
 
 type Language = 'marathi' | 'english';
 
@@ -23,100 +24,141 @@ const LanguageSelectionScreen: React.FC<Props> = ({
   const [selectedLanguage, setSelectedLanguage] =
     useState<Language | null>(null);
 
-  const handleContinue = () => {
+  const { setLanguage } = useLanguage();
+
+  const handleContinue = async () => {
     if (!selectedLanguage) {
       return;
     }
 
-    console.log(
-      'Selected Language:',
-      selectedLanguage,
-    );
+    try {
+      await setLanguage(selectedLanguage);
 
-    onContinue();
+      console.log(
+        'Selected Medium:',
+        selectedLanguage,
+      );
+
+      onContinue();
+    } catch (error) {
+      console.error(
+        'Error selecting medium:',
+        error,
+      );
+    }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-
       <View style={styles.content}>
 
+        {/* Header */}
         <Text style={styles.title}>
-          Choose Your Language
+          Choose Your Medium
         </Text>
 
         <Text style={styles.marathiTitle}>
-          तुमची भाषा निवडा
+          तुमचे माध्यम निवडा
         </Text>
 
         <Text style={styles.subtitle}>
-          You can change this later from settings.
+          Select your preferred learning medium.
         </Text>
 
+        {/* Medium Options */}
         <View style={styles.options}>
 
-          <Pressable
-            onPress={() =>
-              setSelectedLanguage('marathi')
-            }
-            style={[
-              styles.languageCard,
-
-              selectedLanguage === 'marathi' &&
-                styles.selectedCard,
-            ]}
-          >
-
-            <Text style={styles.languageIcon}>
-              म
-            </Text>
-
-            <View>
-
-              <Text style={styles.languageName}>
-                मराठी
-              </Text>
-
-              <Text style={styles.description}>
-                Marathi Medium
-              </Text>
-
-            </View>
-
-          </Pressable>
-
+          {/* English Medium */}
           <Pressable
             onPress={() =>
               setSelectedLanguage('english')
             }
-            style={[
+            style={({ pressed }) => [
               styles.languageCard,
 
               selectedLanguage === 'english' &&
                 styles.selectedCard,
+
+              pressed && styles.pressedCard,
             ]}
           >
-
-            <Text style={styles.languageIcon}>
-              A
-            </Text>
-
-            <View>
-
-              <Text style={styles.languageName}>
-                English
+            <View style={styles.languageIconContainer}>
+              <Text style={styles.languageIcon}>
+                A
               </Text>
+            </View>
 
-              <Text style={styles.description}>
+            <View style={styles.languageContent}>
+              <Text style={styles.languageName}>
                 English Medium
               </Text>
 
+              <Text style={styles.description}>
+                Learn in English language
+              </Text>
             </View>
 
+            <View
+              style={[
+                styles.radioButton,
+
+                selectedLanguage === 'english' &&
+                  styles.selectedRadioButton,
+              ]}
+            >
+              {selectedLanguage === 'english' && (
+                <View style={styles.radioDot} />
+              )}
+            </View>
+          </Pressable>
+
+          {/* Marathi Medium */}
+          <Pressable
+            onPress={() =>
+              setSelectedLanguage('marathi')
+            }
+            style={({ pressed }) => [
+              styles.languageCard,
+
+              selectedLanguage === 'marathi' &&
+                styles.selectedCard,
+
+              pressed && styles.pressedCard,
+            ]}
+          >
+            <View style={styles.languageIconContainer}>
+              <Text style={styles.languageIcon}>
+                म
+              </Text>
+            </View>
+
+            <View style={styles.languageContent}>
+              <Text style={styles.languageName}>
+                Marathi Medium
+              </Text>
+
+              <Text style={styles.marathiName}>
+                मराठी माध्यम
+              </Text>
+            </View>
+
+            <View
+              style={[
+                styles.radioButton,
+
+                selectedLanguage === 'marathi' &&
+                  styles.selectedRadioButton,
+              ]}
+            >
+              {selectedLanguage === 'marathi' && (
+                <View style={styles.radioDot} />
+              )}
+            </View>
           </Pressable>
 
         </View>
 
+        {/* Continue Button */}
         <Button
           title="Continue"
           onPress={handleContinue}
@@ -124,7 +166,6 @@ const LanguageSelectionScreen: React.FC<Props> = ({
         />
 
       </View>
-
     </SafeAreaView>
   );
 };
@@ -151,7 +192,7 @@ const styles = StyleSheet.create({
   },
 
   marathiTitle: {
-    fontSize: 22,
+    fontSize: 21,
     fontWeight: '600',
     color: COLORS.primary,
     textAlign: 'center',
@@ -181,7 +222,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
 
-    gap: 20,
+    gap: 16,
   },
 
   selectedCard: {
@@ -189,23 +230,67 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primaryLight,
   },
 
-  languageIcon: {
+  pressedCard: {
+    opacity: 0.8,
+  },
+
+  languageIconContainer: {
     width: 55,
-    fontSize: 32,
+    height: 55,
+    borderRadius: 14,
+    backgroundColor: COLORS.primaryLight,
+
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  languageIcon: {
+    fontSize: 28,
     fontWeight: '700',
     color: COLORS.primary,
-    textAlign: 'center',
+  },
+
+  languageContent: {
+    flex: 1,
   },
 
   languageName: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
     color: COLORS.textPrimary,
+  },
+
+  marathiName: {
+    fontSize: 15,
+    color: COLORS.textSecondary,
+    marginTop: 4,
   },
 
   description: {
     fontSize: 14,
     color: COLORS.textSecondary,
     marginTop: 4,
+  },
+
+  radioButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: COLORS.border,
+
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  selectedRadioButton: {
+    borderColor: COLORS.primary,
+  },
+
+  radioDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: COLORS.primary,
   },
 });

@@ -10,14 +10,15 @@ export type RootStackParamList = {
   Dashboard: undefined;
   ClassList: undefined;
   SubjectList: { classId: number };
-  ChapterList: { subjectId: number };
-  ChapterDetail: { chapterId: number };
-  VideoPlayer: { chapterId: number };
-  PdfViewer: { chapterId: number };
-  QuizList: { chapterId: number };
+  //ChapterList: { subjectId: number };
+  //ChapterDetail: { subjectId: number };
+  LearningContent: { subjectId: number };
+  VideoPlayer: { subjectId: number };
+  PdfViewer: { subjectId: number };
+  QuizList: { subjectId: number };
   QuizScreen: { quizId: number };
   QuizResult: { quizId: number; score: number; total: number };
-  Games: { chapterId: number };
+  Games: { subjectId: number };
   Progress: undefined;
   Profile: undefined;
   Settings: undefined;
@@ -40,14 +41,48 @@ export type StudentTabParamList = {
   Profile: undefined;
 };
 
-export type LearningStackParamList = {
+/*export type LearningStackParamList = {
   ClassList: undefined;
   SubjectList: { classId: number };
   ChapterList: { subjectId: number };
-  ChapterDetail: { chapterId: number };
-  VideoPlayer: { chapterId: number };
-  PdfViewer: { chapterId: number };
-  QuizList: { chapterId: number };
+  ChapterDetail: { subjectId: number };
+  VideoPlayer: { subjectId: number };
+  PdfViewer: { subjectId: number };
+  QuizList: { subjectId: number };
   QuizScreen: { quizId: number };
   QuizResult: { quizId: number; score: number; total: number };
+};*/
+
+export type LearningStackParamList = {
+  ClassList: undefined;
+
+  SubjectList: {
+    classId: number;
+  };
+
+  LearningContent: {
+    subjectId: number;
+  };
+
+  VideoPlayer: {
+    subjectId: number;
+  };
+
+  PdfViewer: {
+    subjectId: number;
+  };
+
+  QuizList: {
+    subjectId: number;
+  };
+
+  QuizScreen: {
+    quizId: number;
+  };
+
+  QuizResult: {
+    quizId: number;
+    score: number;
+    total: number;
+  };
 };
