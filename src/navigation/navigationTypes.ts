@@ -9,21 +9,42 @@ export type RootStackParamList = {
   LicenseActivation: undefined;
   Dashboard: undefined;
   ClassList: undefined;
-  SubjectList: { classId: number };
-  //ChapterList: { subjectId: number };
-  //ChapterDetail: { subjectId: number };
-  LearningContent: { subjectId: number };
-  VideoPlayer: { subjectId: number };
-  PdfViewer: { subjectId: number };
-  QuizList: { subjectId: number };
-  QuizScreen: { quizId: number };
-  QuizResult: { quizId: number; score: number; total: number };
-  Games: { subjectId: number };
+  SubjectList: {
+    classId: number;
+  };
+  LearningContent: {
+    subjectId: number;
+  };
+  VideoPlayer: {
+    subjectId: number;
+  };
+  PdfViewer: {
+    subjectId: number;
+  };
+  Notes: {
+    subjectId: number;
+  };
+  QuizList: {
+    subjectId: number;
+  };
+  QuizScreen: {
+    quizId: number;
+  };
+  QuizResult: {
+    quizId: number;
+    score: number;
+    total: number;
+  };
+  Games: {
+    subjectId: number;
+  };
   Progress: undefined;
   Profile: undefined;
   Settings: undefined;
   TeacherDashboard: undefined;
-  ParentDashboard: { studentId: number };
+  ParentDashboard: {
+    studentId: number;
+  };
 };
 
 export type AuthStackParamList = {
@@ -40,18 +61,6 @@ export type StudentTabParamList = {
   Games: undefined;
   Profile: undefined;
 };
-
-/*export type LearningStackParamList = {
-  ClassList: undefined;
-  SubjectList: { classId: number };
-  ChapterList: { subjectId: number };
-  ChapterDetail: { subjectId: number };
-  VideoPlayer: { subjectId: number };
-  PdfViewer: { subjectId: number };
-  QuizList: { subjectId: number };
-  QuizScreen: { quizId: number };
-  QuizResult: { quizId: number; score: number; total: number };
-};*/
 
 export type LearningStackParamList = {
   ClassList: undefined;
@@ -72,6 +81,10 @@ export type LearningStackParamList = {
     subjectId: number;
   };
 
+  Notes: {
+    subjectId: number;
+  };
+
   QuizList: {
     subjectId: number;
   };
@@ -85,4 +98,6 @@ export type LearningStackParamList = {
     score: number;
     total: number;
   };
+
+  PdfDisplay: { pdfId: number; pdfUrl: string; title: string };
 };

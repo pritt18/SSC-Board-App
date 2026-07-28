@@ -1,0 +1,88 @@
+1
+00:00:00,000 --> 00:00:06,000
+Python is the most popular programming language in the world because of its simple and beginner-friendly syntax.
+
+2
+00:00:06,000 --> 00:00:10,000
+And that's the number one reason it's hated by C++ programmers.
+
+3
+00:00:10,000 --> 00:00:14,000
+It's the language of choice for artificial intelligence and machine learning,
+
+4
+00:00:14,000 --> 00:00:18,000
+but also heavily used in scripting, automation, and backend development.
+
+5
+00:00:18,000 --> 00:00:24,000
+It has a huge ecosystem of third-party libraries such as Numpi for numerical computing, pandas,
+
+6
+00:00:24,000 --> 00:00:28,960
+for data analysis, psychic learn, for machine learning, tensor flow, for deep learning,
+
+7
+00:00:28,960 --> 00:00:34,720
+Django, for building web applications, and Keevy for cross-platform, desktop, and mobile apps.
+
+8
+00:00:34,720 --> 00:00:40,560
+In case you care, Python is 33 years old. It was created by a Dutch programmer in 1991
+
+9
+00:00:40,560 --> 00:00:46,160
+and named after the British comedy Monty Python. Python is an interpreted language, meaning you can
+
+10
+00:00:46,160 --> 00:00:51,280
+run your code without the compilation step. But you need an interpreter that's written in C for
+
+11
+00:00:51,280 --> 00:00:56,800
+performance. Unlike other languages, Python has hidden gems. We can import this for the
+
+12
+00:00:56,800 --> 00:01:03,760
+zen of Python or anti-gravity for a fun surprise. We can declare a variable with a name and a value
+
+13
+00:01:03,760 --> 00:01:08,800
+that can be a string, a Boolean, or a number. Python is a dynamically typed language,
+
+14
+00:01:08,800 --> 00:01:13,920
+meaning the type of variables is determined at runtime. Unlike other languages in Python,
+
+15
+00:01:13,920 --> 00:01:19,600
+we can add or even multiply strings and numbers. Python has four types of collections, lists,
+
+16
+00:01:19,680 --> 00:01:26,000
+topples, sets, and dictionaries. Now, unlike many languages, we can use a negative index to count
+
+17
+00:01:26,000 --> 00:01:32,080
+backwards. To define a function, we use the dev keyword and indentation to declare a block of code,
+
+18
+00:01:32,080 --> 00:01:37,200
+so no curly braces. And that's another reason Python is hated by C++ programmers.
+
+19
+00:01:37,200 --> 00:01:42,240
+Python also supports object-oriented programming. We can define classes using the class keyword and
+
+20
+00:01:42,240 --> 00:01:47,840
+have them inherit from each other. Python comes with batteries included, a huge library of built-in
+
+21
+00:01:47,840 --> 00:01:54,720
+modules for tasks like working with CSV, JSON, emails, web scraping, and so on. And that was Python
+
+22
+00:01:54,720 --> 00:02:04,240
+in two minutes. Want to learn Python? Check out my tutorials.
+

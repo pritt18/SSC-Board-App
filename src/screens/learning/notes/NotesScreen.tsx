@@ -25,59 +25,66 @@ import {
 
 type Props = NativeStackScreenProps<
   LearningStackParamList,
-  'SubjectList'
+  'Notes'
 >;
 
-interface SubjectItem {
+interface NoteItem {
   id: number;
-  class_id: number;
+  subject_id: number;
+  chapter_number: number;
   name_english: string;
   name_marathi: string;
-  icon?: string | null;
-  color?: string | null;
-  is_active: number | boolean;
+  notes_url: string | null;
 }
 
-const SubjectListScreen: React.FC<Props> = ({
+const NotesScreen: React.FC<Props> = ({
   navigation,
   route,
 }) => {
-  const { classId } = route.params;
+  const { subjectId } = route.params;
 
-  const [subjects, setSubjects] =
-    useState<SubjectItem[]>([]);
+  const [notes, setNotes] =
+    useState<NoteItem[]>([]);
 
   const [isLoading, setIsLoading] =
     useState(true);
 
-  const loadSubjects = async () => {
+  const loadNotes = async () => {
     try {
       setIsLoading(true);
 
-      const subjectData = await executeQuery(
-        `SELECT *
-         FROM subjects
-         WHERE class_id = ?
-         AND is_active = ?
-         ORDER BY name_english ASC`,
-        [classId, 1],
+      const noteData = await executeQuery(
+        `
+        SELECT
+          id,
+          subject_id,
+          chapter_number,
+          name_english,
+          name_marathi,
+          notes_url
+        FROM chapters
+        WHERE subject_id = ?
+          AND is_active = ?
+          AND notes_url IS NOT NULL
+        ORDER BY chapter_number ASC
+        `,
+        [subjectId, 1],
       );
 
       console.log(
-        `Subjects for Class ${classId}:`,
-        subjectData,
+        'Notes loaded for subject:',
+        subjectId,
+        noteData,
       );
 
-      setSubjects(
-        subjectData as SubjectItem[],
-      );
+      setNotes(noteData as NoteItem[]);
     } catch (error) {
       console.error(
-        'Error loading subjects:',
+        'Error loading notes:',
         error,
       );
 
-      setSubjects([]);
+      setNotes([]);
     } finally {
       setIsLoading(false);
     }
@@ -85,19 +92,19 @@ const SubjectListScreen: React.FC<Props> = ({
 
   useFocusEffect(
     useCallback(() => {
-      loadSubjects();
-    }, [classId]),
+      loadNotes();
+    }, [subjectId]),
   );
 
-  const handleSubjectPress = (
-    subjectId: number,
+  const handleNotePress = (
+    note: NoteItem,
   ) => {
-    navigation.navigate(
-      'LearningContent',
-      {
-        subjectId,
-      },
+    console.log(
+      'Selected note:',
+      note.notes_url,
     );
+
+    // Offline/local note opening will be added here.
   };
 
   if (isLoading) {
@@ -111,7 +118,7 @@ const SubjectListScreen: React.FC<Props> = ({
         />
 
         <Text style={styles.loadingText}>
-          Loading subjects...
+          Loading notes...
         </Text>
       </SafeAreaView>
     );
@@ -138,48 +145,45 @@ const SubjectListScreen: React.FC<Props> = ({
             </Text>
           </Pressable>
 
-          <View style={styles.headerText}>
-            <Text style={styles.title}>
-              Class {classId}
+          <View style={styles.headerContent}>
+            <Text style={styles.headerLabel}>
+              Subject Learning
             </Text>
 
-            <Text style={styles.subtitle}>
-              Choose a subject to start learning
+            <Text style={styles.title}>
+              Notes
             </Text>
           </View>
         </View>
 
         <Text style={styles.sectionTitle}>
-          Subjects
+          Study Notes
         </Text>
 
-        {subjects.length === 0 ? (
+        {notes.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyIcon}>
-              📚
+              📒
             </Text>
 
             <Text style={styles.emptyTitle}>
-              No Subjects Available
+              No Notes Available
             </Text>
 
             <Text style={styles.emptyText}>
-              Subjects for this class have not been added yet.
+              Notes for this subject have not been added yet.
             </Text>
           </View>
         ) : (
-          <View style={styles.grid}>
-            {subjects.map(subject => (
+          <View style={styles.notesList}>
+            {notes.map(note => (
               <Pressable
-                key={subject.id}
+                key={note.id}
                 onPress={() =>
-                  handleSubjectPress(
-                    subject.id,
-                  )
+                  handleNotePress(note)
                 }
                 style={({ pressed }) => [
-                  styles.subjectCard,
-
+                  styles.noteCard,
                   pressed &&
                     styles.pressedCard,
                 ]}
@@ -187,19 +191,29 @@ const SubjectListScreen: React.FC<Props> = ({
                 <View
                   style={styles.iconContainer}
                 >
-                  <Text style={styles.icon}>
-                    {subject.icon || '📘'}
+                  <Text style={styles.noteIcon}>
+                    📒
                   </Text>
                 </View>
 
-                <Text
-                  style={styles.subjectName}
-                >
-                  {subject.name_english}
-                </Text>
+                <View style={styles.noteInfo}>
+                  <Text
+                    style={styles.chapterLabel}
+                  >
+                    Chapter {note.chapter_number}
+                  </Text>
 
-                <Text style={styles.openText}>
-                  Start Learning →
+                  <Text style={styles.noteTitle}>
+                    {note.name_english}
+                  </Text>
+
+                  <Text style={styles.openText}>
+                    Open Notes →
+                  </Text>
+                </View>
+
+                <Text style={styles.arrow}>
+                  ›
                 </Text>
               </Pressable>
             ))}
@@ -210,7 +224,7 @@ const SubjectListScreen: React.FC<Props> = ({
   );
 };
 
-export default SubjectListScreen;
+export default NotesScreen;
 
 const styles = StyleSheet.create({
   container: {
@@ -257,20 +271,21 @@ const styles = StyleSheet.create({
     marginTop: -4,
   },
 
-  headerText: {
+  headerContent: {
     flex: 1,
+  },
+
+  headerLabel: {
+    color: COLORS.primary,
+    fontSize: 13,
+    fontWeight: '600',
   },
 
   title: {
     fontSize: 26,
     fontWeight: '700',
     color: COLORS.textPrimary,
-  },
-
-  subtitle: {
-    fontSize: 13,
-    color: COLORS.textSecondary,
-    marginTop: 4,
+    marginTop: 3,
   },
 
   sectionTitle: {
@@ -280,16 +295,13 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
 
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    rowGap: 16,
+  notesList: {
+    gap: 14,
   },
 
-  subjectCard: {
-    width: '47%',
-    minHeight: 170,
+  noteCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: COLORS.white,
     borderRadius: 18,
     padding: 16,
@@ -302,30 +314,46 @@ const styles = StyleSheet.create({
   },
 
   iconContainer: {
-    width: 52,
-    height: 52,
-    borderRadius: 14,
+    width: 58,
+    height: 58,
+    borderRadius: 16,
     backgroundColor: COLORS.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
 
-  icon: {
-    fontSize: 26,
+  noteIcon: {
+    fontSize: 27,
   },
 
-  subjectName: {
-    fontSize: 17,
-    fontWeight: '700',
+  noteInfo: {
+    flex: 1,
+    marginLeft: 15,
+  },
+
+  chapterLabel: {
+    color: COLORS.primary,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+
+  noteTitle: {
     color: COLORS.textPrimary,
-    marginTop: 16,
+    fontSize: 16,
+    fontWeight: '700',
+    marginTop: 3,
   },
 
   openText: {
     color: COLORS.primary,
     fontSize: 12,
     fontWeight: '600',
-    marginTop: 8,
+    marginTop: 6,
+  },
+
+  arrow: {
+    fontSize: 28,
+    color: COLORS.textSecondary,
   },
 
   emptyContainer: {

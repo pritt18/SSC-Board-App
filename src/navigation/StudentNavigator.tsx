@@ -13,7 +13,7 @@ import GamesScreen from '../screens/games/GamesScreen';
 //import ChapterDetailScreen from '../screens/student/chapters/ChapterDetailsScreen';
 //import ChapterDetailScreen from '../screens/learning/chapters/ChapterDetailScreen';
 import VideoPlayerScreen from '../screens/learning/videos/VideoPlayerScreen';
-import PdfViewerScreen from '../screens/learning/pdfs/PdfViewerScreen';
+import PdfViewerScreen from '../screens/learning/PdfViewerScreen';
 import QuizListScreen from '../screens/quiz/QuizListScreen';
 import QuizScreen from '../screens/quiz/QuizScreen';
 import QuizResultScreen from '../screens/quiz/QuizResultScreen';
@@ -23,6 +23,9 @@ import SubjectListScreen from '../screens/learning/subjects/SubjectListScreen';
 //import ChapterListScreen from '../screens/learning/chapters/ChapterListScreen';
 //import ChapterDetailScreen from '../screens/learning/chapters/ChapterDetailScreen';
 import LearningContentScreen from '../screens/learning/LearningContentScreen';
+import NotesScreen from '../screens/learning/notes/NotesScreen';
+// File ke upar jahan baaki screens import hain
+import PdfDisplayScreen from '../screens/learning/PdfDisplayScreen';
 
 import {
   StudentTabParamList,
@@ -48,6 +51,9 @@ const LearningStack: React.FC = () => {
       <Stack.Screen name="QuizList" component={QuizListScreen} />
       <Stack.Screen name="QuizScreen" component={QuizScreen} />
       <Stack.Screen name="QuizResult" component={QuizResultScreen} />
+      <Stack.Screen name="Notes" component={NotesScreen} />
+      <Stack.Screen name="PdfDisplay" component={PdfDisplayScreen} />
+      
     </Stack.Navigator>
   );
 };

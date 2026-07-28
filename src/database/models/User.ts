@@ -62,6 +62,21 @@ export const UserModel = {
     return results as User[];
   },
 
+  findByRole: async (
+  role: User['role'],
+  ): Promise<User[]> => {
+  const query = `
+    SELECT *
+    FROM users
+    WHERE role = ?
+    ORDER BY full_name ASC
+  `;
+
+  const results = await executeQuery(query, [role]);
+
+  return results as User[];
+  },
+
   findByUsername: async (username: string): Promise<User | null> => {
     const query = 'SELECT * FROM users WHERE username = ?';
     const results = await executeQuery(query, [username]);

@@ -4,14 +4,14 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
 import AuthNavigator from './AuthNavigator';
 import StudentNavigator from './StudentNavigator';
+import AdminNavigator from './AdminNavigator';
 import LanguageSelectionScreen from '../screens/language/LanguageSelectionScreen';
-
 import { RootStackParamList } from './navigationTypes';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const AppNavigator: React.FC = () => {
-  const { isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth();
 
   const [isMediumSelected, setIsMediumSelected] =
     useState(false);
@@ -31,7 +31,12 @@ const AppNavigator: React.FC = () => {
           name="Auth"
           component={AuthNavigator}
         />
-      ) : !isMediumSelected ? (
+      ) : user?.role === 'admin' ? (
+        <Stack.Screen name="Main">
+          {() => <AdminNavigator />}
+        </Stack.Screen>
+      ) : user?.role === 'student' &&
+        !isMediumSelected ? (
         <Stack.Screen name="LanguageSelection">
           {() => (
             <LanguageSelectionScreen

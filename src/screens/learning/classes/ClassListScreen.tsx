@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { COLORS } from '../../../constants/colors';
+import { useAuth } from '../../../context/AuthContext';
 
 import {
   LearningStackParamList,
@@ -22,21 +23,23 @@ type Props = NativeStackScreenProps<
 >;
 
 const classes = [
-  { id: 1, name: 'Class 1', unlocked: false },
-  { id: 2, name: 'Class 2', unlocked: false },
-  { id: 3, name: 'Class 3', unlocked: false },
-  { id: 4, name: 'Class 4', unlocked: false },
-  { id: 5, name: 'Class 5', unlocked: false },
-  { id: 6, name: 'Class 6', unlocked: false },
-  { id: 7, name: 'Class 7', unlocked: false },
-  { id: 8, name: 'Class 8', unlocked: true },
-  { id: 9, name: 'Class 9', unlocked: false },
-  { id: 10, name: 'Class 10', unlocked: false },
+  { id: 1, name: 'Class 1' },
+  { id: 2, name: 'Class 2' },
+  { id: 3, name: 'Class 3' },
+  { id: 4, name: 'Class 4' },
+  { id: 5, name: 'Class 5' },
+  { id: 6, name: 'Class 6' },
+  { id: 7, name: 'Class 7' },
+  { id: 8, name: 'Class 8' },
+  { id: 9, name: 'Class 9' },
+  { id: 10, name: 'Class 10' },
 ];
 
 const MyClassesScreen: React.FC<Props> = ({
   navigation,
 }) => {
+  const { user } = useAuth();
+
   const handleClassPress = (
     classId: number,
     unlocked: boolean,
@@ -51,7 +54,10 @@ const MyClassesScreen: React.FC<Props> = ({
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView
+      style={styles.container}
+      edges={['top']}
+    >
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
@@ -67,65 +73,72 @@ const MyClassesScreen: React.FC<Props> = ({
         </View>
 
         <View style={styles.grid}>
-          {classes.map(item => (
-            <Pressable
-              key={item.id}
-              onPress={() =>
-                handleClassPress(
-                  item.id,
-                  item.unlocked,
-                )
-              }
-              style={({ pressed }) => [
-                styles.classCard,
+          {classes.map(item => {
+            // Dynamically unlock the class assigned
+            // to the currently logged-in user.
+            const unlocked =
+              user?.class_id === item.id;
 
-                item.unlocked &&
-                  styles.unlockedCard,
+            return (
+              <Pressable
+                key={item.id}
+                onPress={() =>
+                  handleClassPress(
+                    item.id,
+                    unlocked,
+                  )
+                }
+                style={({ pressed }) => [
+                  styles.classCard,
 
-                pressed &&
-                  item.unlocked &&
-                  styles.pressedCard,
-              ]}
-            >
-              <View
-                style={[
-                  styles.classNumber,
+                  unlocked &&
+                    styles.unlockedCard,
 
-                  item.unlocked &&
-                    styles.unlockedNumber,
+                  pressed &&
+                    unlocked &&
+                    styles.pressedCard,
                 ]}
               >
-                <Text
+                <View
                   style={[
-                    styles.classNumberText,
+                    styles.classNumber,
 
-                    item.unlocked &&
-                      styles.unlockedNumberText,
+                    unlocked &&
+                      styles.unlockedNumber,
                   ]}
                 >
-                  {item.id}
+                  <Text
+                    style={[
+                      styles.classNumberText,
+
+                      unlocked &&
+                        styles.unlockedNumberText,
+                    ]}
+                  >
+                    {item.id}
+                  </Text>
+                </View>
+
+                <Text style={styles.className}>
+                  {item.name}
                 </Text>
-              </View>
 
-              <Text style={styles.className}>
-                {item.name}
-              </Text>
+                <Text
+                  style={[
+                    styles.status,
 
-              <Text
-                style={[
-                  styles.status,
-
-                  item.unlocked
-                    ? styles.unlockedText
-                    : styles.lockedText,
-                ]}
-              >
-                {item.unlocked
-                  ? 'Unlocked'
-                  : '🔒 Locked'}
-              </Text>
-            </Pressable>
-          ))}
+                    unlocked
+                      ? styles.unlockedText
+                      : styles.lockedText,
+                  ]}
+                >
+                  {unlocked
+                    ? 'Unlocked'
+                    : '🔒 Locked'}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
       </ScrollView>
     </SafeAreaView>

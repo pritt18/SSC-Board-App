@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { COLORS } from '../../constants/colors';
+
 import {
   LearningStackParamList,
 } from '../../navigation/navigationTypes';
@@ -44,6 +45,40 @@ const LearningContentScreen: React.FC<Props> = ({
     });
   };
 
+  const handleNotesPress = () => {
+  navigation.navigate('Notes', {
+    subjectId,
+  });
+};
+
+  const handlePracticePress = () => {
+    console.log(
+      'Practice Questions clicked for subject:',
+      subjectId,
+    );
+  };
+
+  const handleGamesPress = () => {
+    console.log(
+      'Games clicked for subject:',
+      subjectId,
+    );
+  };
+
+  const handlePuzzlesPress = () => {
+    console.log(
+      'Puzzles clicked for subject:',
+      subjectId,
+    );
+  };
+
+  const handleAssignmentPress = () => {
+    console.log(
+      'Assignment clicked for subject:',
+      subjectId,
+    );
+  };
+
   const learningOptions = [
     {
       id: 1,
@@ -64,9 +99,7 @@ const LearningContentScreen: React.FC<Props> = ({
       title: 'Notes',
       subtitle: 'Read subject notes',
       icon: '📒',
-      onPress: () => {
-        console.log('Notes clicked for subject:', subjectId);
-      },
+      onPress: handleNotesPress,
     },
     {
       id: 4,
@@ -80,42 +113,28 @@ const LearningContentScreen: React.FC<Props> = ({
       title: 'Practice Questions',
       subtitle: 'Practice important questions',
       icon: '✍️',
-      onPress: () => {
-        console.log(
-          'Practice Questions clicked for subject:',
-          subjectId,
-        );
-      },
+      onPress: handlePracticePress,
     },
     {
       id: 6,
       title: 'Games',
       subtitle: 'Learn while playing',
       icon: '🎮',
-      onPress: () => {
-        console.log('Games clicked for subject:', subjectId);
-      },
+      onPress: handleGamesPress,
     },
     {
       id: 7,
       title: 'Puzzles',
       subtitle: 'Improve your thinking skills',
       icon: '🧩',
-      onPress: () => {
-        console.log('Puzzles clicked for subject:', subjectId);
-      },
+      onPress: handlePuzzlesPress,
     },
     {
       id: 8,
       title: 'Assignment',
       subtitle: 'Complete your assignment',
       icon: '📋',
-      onPress: () => {
-        console.log(
-          'Assignment clicked for subject:',
-          subjectId,
-        );
-      },
+      onPress: handleAssignmentPress,
     },
   ];
 
@@ -128,11 +147,12 @@ const LearningContentScreen: React.FC<Props> = ({
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
         <View style={styles.header}>
           <Pressable
             style={styles.backButton}
-            onPress={() => navigation.goBack()}
+            onPress={() =>
+              navigation.goBack()
+            }
           >
             <Text style={styles.backText}>
               ‹
@@ -150,7 +170,6 @@ const LearningContentScreen: React.FC<Props> = ({
           </View>
         </View>
 
-        {/* Progress */}
         <View style={styles.progressCard}>
           <View style={styles.progressHeader}>
             <Text style={styles.progressTitle}>
@@ -171,7 +190,6 @@ const LearningContentScreen: React.FC<Props> = ({
           </Text>
         </View>
 
-        {/* Learning Options */}
         <Text style={styles.sectionTitle}>
           Learning Content
         </Text>
@@ -286,7 +304,8 @@ const styles = StyleSheet.create({
 
   progressBackground: {
     height: 8,
-    backgroundColor: 'rgba(255,255,255,0.3)',
+    backgroundColor:
+      'rgba(255,255,255,0.3)',
     borderRadius: 4,
     marginTop: 16,
     overflow: 'hidden',
