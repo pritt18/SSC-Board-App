@@ -238,68 +238,68 @@ export const seedDatabase = async () => {
         // -------------------------------------
 
         const existingVideo =
-  await executeQuery(
-    `
-    SELECT id
-    FROM videos
-    WHERE subject_id = ?
-      AND video_url = ?
-    LIMIT 1
-    `,
-    [
-      subjectId,
-      'sample-video.mp4',
-    ],
-  );
+          await executeQuery(
+            `
+            SELECT id
+            FROM videos
+            WHERE subject_id = ?
+              AND video_url = ?
+            LIMIT 1
+            `,
+            [
+              subjectId,
+              'sample-video.mp4',
+            ],
+          );
 
-if (
-  !existingVideo ||
-  existingVideo.length === 0
-) {
-  await executeQuery(
-    `
-    INSERT INTO videos (
-      subject_id,
-      title_english,
-      title_marathi,
-      description_english,
-      description_marathi,
-      video_url,
-      subtitle_url,
-      sort_order
-    )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `,
-    [
-      subjectId,
-      'Sample Video',
-      'नमुना व्हिडिओ',
-      'Sample offline video lesson',
-      'नमुना ऑफलाइन व्हिडिओ धडा',
-      'sample-video.mp4',
-      'sample-video.srt',
-      1,
-    ],
-  );
-} else {
-  /*
-   * Important:
-   * Updates an already seeded video too.
-   */
-  await executeQuery(
-    `
-    UPDATE videos
+        if (
+          !existingVideo ||
+          existingVideo.length === 0
+        ) {
+          await executeQuery(
+            `
+            INSERT INTO videos (
+              subject_id,
+              title_english,
+              title_marathi,
+              description_english,
+              description_marathi,
+              video_url,
+              subtitle_url,
+              sort_order
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `,
+            [
+              subjectId,
+              'Sample Video',
+              'नमुना व्हिडिओ',
+              'Sample offline video lesson',
+              'नमुना ऑफलाइन व्हिडिओ धडा',
+              'sample-video.mp4',
+              'sample-video.srt',
+              1,
+            ],
+          );
+        } else {
+          /*
+           * Important:
+           * Updates an already seeded video too.
+           */
+          await executeQuery(
+            `
+            UPDATE videos
 
-    SET subtitle_url = ?
+            SET subtitle_url = ?
 
-    WHERE id = ?
-    `,
-    [
-      'sample-video.srt',
-      existingVideo[0].id,
-    ],
-  );
-}
+            WHERE id = ?
+            `,
+            [
+              'sample-video.srt',
+              existingVideo[0].id,
+            ],
+          );
+        }
 
         // -------------------------------------
         // 7. SEED SAMPLE PDF
@@ -354,203 +354,235 @@ if (
         }
 
         // -------------------------------------
-// 8. SEED SAMPLE QUIZ
-// -------------------------------------
+        // 8. SEED SAMPLE QUIZ
+        // -------------------------------------
 
-console.log('Checking sample quiz...');
+        console.log('Checking sample quiz...');
 
-const existingQuiz = await executeQuery(
-  `
-  SELECT id
-  FROM quizzes
-  WHERE subject_id = ?
-    AND title_english = ?
-  LIMIT 1
-  `,
-  [
-    subjectId,
-    'Mathematics Practice Quiz',
-  ],
-);
+        const existingQuiz = await executeQuery(
+          `
+          SELECT id
+          FROM quizzes
+          WHERE subject_id = ?
+            AND title_english = ?
+          LIMIT 1
+          `,
+          [
+            subjectId,
+            'Mathematics Practice Quiz',
+          ],
+        );
 
-let quizId: number;
+        let quizId: number;
 
-if (
-  existingQuiz &&
-  existingQuiz.length > 0
-) {
-  quizId = existingQuiz[0].id;
+        if (
+          existingQuiz &&
+          existingQuiz.length > 0
+        ) {
+          quizId = existingQuiz[0].id;
 
-  console.log(
-    'Sample quiz already exists',
-  );
-} else {
-  await executeQuery(
-    `
-    INSERT INTO quizzes (
-      subject_id,
-      title_english,
-      title_marathi,
-      description_english,
-      description_marathi,
-      type,
-      total_questions,
-      time_limit,
-      passing_percentage,
-      is_active
-    )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `,
-    [
-      subjectId,
-      'Mathematics Practice Quiz',
-      'गणित सराव प्रश्नमंजुषा',
-      'Practice basic mathematics questions',
-      'मूलभूत गणित प्रश्नांचा सराव',
-      'practice_mcq',
-      5,
-      5,
-      40,
-      1,
-    ],
-  );
+          console.log(
+            'Sample quiz already exists',
+          );
+        } else {
+          await executeQuery(
+            `
+            INSERT INTO quizzes (
+              subject_id,
+              title_english,
+              title_marathi,
+              description_english,
+              description_marathi,
+              type,
+              total_questions,
+              time_limit,
+              passing_percentage,
+              is_active
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `,
+            [
+              subjectId,
+              'Mathematics Practice Quiz',
+              'गणित सराव प्रश्नमंजुषा',
+              'Practice basic mathematics questions',
+              'मूलभूत गणित प्रश्नांचा सराव',
+              'practice_mcq',
+              5,
+              5,
+              40,
+              1,
+            ],
+          );
 
-  const createdQuiz =
-    await executeQuery(
-      `
-      SELECT id
-      FROM quizzes
-      WHERE subject_id = ?
-        AND title_english = ?
-      LIMIT 1
-      `,
-      [
-        subjectId,
-        'Mathematics Practice Quiz',
-      ],
-    );
+          const createdQuiz =
+            await executeQuery(
+              `
+              SELECT id
+              FROM quizzes
+              WHERE subject_id = ?
+                AND title_english = ?
+              LIMIT 1
+              `,
+              [
+                subjectId,
+                'Mathematics Practice Quiz',
+              ],
+            );
 
-  quizId = createdQuiz[0].id;
+          quizId = createdQuiz[0].id;
 
-  console.log(
-    'Sample quiz created',
-  );
-}
+          console.log(
+            'Sample quiz created',
+          );
+        }
 
-// -------------------------------------
-// 9. SEED SAMPLE QUESTIONS
-// -------------------------------------
+        // -------------------------------------
+        // 9. SEED SAMPLE QUESTIONS
+        // -------------------------------------
 
-const questions = [
-  {
-    question:
-      'What is 5 + 3?',
-    optionA: '6',
-    optionB: '7',
-    optionC: '8',
-    optionD: '9',
-    correctAnswer: 'c',
-    explanation:
-      '5 + 3 equals 8.',
-  },
-  {
-    question:
-      'What is 10 - 4?',
-    optionA: '5',
-    optionB: '6',
-    optionC: '7',
-    optionD: '8',
-    correctAnswer: 'b',
-    explanation:
-      '10 - 4 equals 6.',
-  },
-  {
-    question:
-      'What is 3 × 4?',
-    optionA: '7',
-    optionB: '10',
-    optionC: '12',
-    optionD: '14',
-    correctAnswer: 'c',
-    explanation:
-      '3 multiplied by 4 equals 12.',
-  },
-  {
-    question:
-      'What is 20 ÷ 5?',
-    optionA: '2',
-    optionB: '3',
-    optionC: '4',
-    optionD: '5',
-    correctAnswer: 'c',
-    explanation:
-      '20 divided by 5 equals 4.',
-  },
-  {
-    question:
-      'Which number is the largest?',
-    optionA: '12',
-    optionB: '25',
-    optionC: '18',
-    optionD: '20',
-    correctAnswer: 'b',
-    explanation:
-      '25 is greater than 12, 18 and 20.',
-  },
-];
+        const questions = [
+          {
+            question: 'What is 5 + 3?',
+            question_marathi: '5 + 3 म्हणजे काय?',
+            optionA: '6',
+            optionA_marathi: '६',
+            optionB: '7',
+            optionB_marathi: '७',
+            optionC: '8',
+            optionC_marathi: '८',
+            optionD: '9',
+            optionD_marathi: '९',
+            correctAnswer: 'c',
+            explanation: '5 + 3 equals 8.',
+            explanation_marathi: '5 + 3 म्हणजे 8.',
+          },
+          {
+            question: 'What is 10 - 4?',
+            question_marathi: '10 - 4 म्हणजे काय?',
+            optionA: '5',
+            optionA_marathi: '५',
+            optionB: '6',
+            optionB_marathi: '६',
+            optionC: '7',
+            optionC_marathi: '७',
+            optionD: '8',
+            optionD_marathi: '८',
+            correctAnswer: 'b',
+            explanation: '10 - 4 equals 6.',
+            explanation_marathi: '10 - 4 म्हणजे 6.',
+          },
+          {
+            question: 'What is 3 × 4?',
+            question_marathi: '3 × 4 म्हणजे काय?',
+            optionA: '7',
+            optionA_marathi: '७',
+            optionB: '10',
+            optionB_marathi: '१०',
+            optionC: '12',
+            optionC_marathi: '१२',
+            optionD: '14',
+            optionD_marathi: '१४',
+            correctAnswer: 'c',
+            explanation: '3 multiplied by 4 equals 12.',
+            explanation_marathi: '3 ला 4 ने गुणले म्हणजे 12.',
+          },
+          {
+            question: 'What is 20 ÷ 5?',
+            question_marathi: '20 ÷ 5 म्हणजे काय?',
+            optionA: '2',
+            optionA_marathi: '२',
+            optionB: '3',
+            optionB_marathi: '३',
+            optionC: '4',
+            optionC_marathi: '४',
+            optionD: '5',
+            optionD_marathi: '५',
+            correctAnswer: 'c',
+            explanation: '20 divided by 5 equals 4.',
+            explanation_marathi: '20 ला 5 ने भागले म्हणजे 4.',
+          },
+          {
+            question: 'Which number is the largest?',
+            question_marathi: 'कोणती संख्या सर्वात मोठी आहे?',
+            optionA: '12',
+            optionA_marathi: '१२',
+            optionB: '25',
+            optionB_marathi: '२५',
+            optionC: '18',
+            optionC_marathi: '१८',
+            optionD: '20',
+            optionD_marathi: '२०',
+            correctAnswer: 'b',
+            explanation: '25 is greater than 12, 18 and 20.',
+            explanation_marathi: '25 ही 12, 18 आणि 20 पेक्षा मोठी आहे.',
+          },
+        ];
 
-const existingQuestions =
-  await executeQuery(
-    `
-    SELECT id
-    FROM questions
-    WHERE quiz_id = ?
-    `,
-    [quizId],
-  );
+        const existingQuestions =
+          await executeQuery(
+            `
+            SELECT id
+            FROM questions
+            WHERE quiz_id = ?
+            `,
+            [quizId],
+          );
 
-if (
-  !existingQuestions ||
-  existingQuestions.length === 0
-) {
-  for (
-    const question of questions
-  ) {
-    await executeQuery(
-      `
-      INSERT INTO questions (
-        quiz_id,
-        question_text_english,
-        option_a_english,
-        option_b_english,
-        option_c_english,
-        option_d_english,
-        correct_answer,
-        explanation_english
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `,
-      [
-        quizId,
-        question.question,
-        question.optionA,
-        question.optionB,
-        question.optionC,
-        question.optionD,
-        question.correctAnswer,
-        question.explanation,
-      ],
-    );
-  }
+        if (
+          !existingQuestions ||
+          existingQuestions.length === 0
+        ) {
+          for (
+            const question of questions
+          ) {
+            await executeQuery(
+              `
+              INSERT INTO questions (
+                quiz_id,
+                question_text_english,
+                question_text_marathi,
+                option_a_english,
+                option_a_marathi,
+                option_b_english,
+                option_b_marathi,
+                option_c_english,
+                option_c_marathi,
+                option_d_english,
+                option_d_marathi,
+                correct_answer,
+                explanation_english,
+                explanation_marathi
+              )
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              `,
+              [
+                quizId,
+                question.question,
+                question.question_marathi,
+                question.optionA,
+                question.optionA_marathi,
+                question.optionB,
+                question.optionB_marathi,
+                question.optionC,
+                question.optionC_marathi,
+                question.optionD,
+                question.optionD_marathi,
+                question.correctAnswer,
+                question.explanation,
+                question.explanation_marathi,
+              ],
+            );
+          }
 
-  console.log(
-    '5 sample quiz questions added',
-  );
-} else {
-  console.log(
-    'Sample quiz questions already exist',
-  );
-}
+          console.log(
+            '5 sample quiz questions added',
+          );
+        } else {
+          console.log(
+            'Sample quiz questions already exist',
+          );
+        }
 
         console.log(
           'Sample learning content checked successfully',
@@ -576,4 +608,3 @@ if (
     );
   }
 };
-

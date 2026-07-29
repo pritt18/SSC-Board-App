@@ -1,56 +1,117 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { COLORS } from '../../constants/colors';
 
-const GamesScreen: React.FC = () => {
+interface Game {
+  id: number;
+  name: string;
+  icon: string;
+  description: string;
+  type: 'crossword' | 'memory' | 'wordsearch' | 'math' | 'science';
+}
+
+const GamesScreen: React.FC = ({ navigation }: any) => {
+  const { user } = useAuth();
   const { t } = useLanguage();
 
-  const games = [
-    { id: 1, name: 'Crossword', icon: '🧩', description: 'Solve educational crosswords' },
-    { id: 2, name: 'Memory Match', icon: '🧠', description: 'Test your memory skills' },
-    { id: 3, name: 'Word Search', icon: '🔍', description: 'Find hidden words' },
-    { id: 4, name: 'Math Game', icon: '➕', description: 'Practice math skills' },
-    { id: 5, name: 'Science Quiz', icon: '🔬', description: 'Test science knowledge' },
-  ];
+  const [games] = useState<Game[]>([
+    { 
+      id: 1, 
+      name: 'Crossword', 
+      icon: '🧩', 
+      description: 'Solve educational crosswords',
+      type: 'crossword'
+    },
+    { 
+      id: 2, 
+      name: 'Memory Match', 
+      icon: '🧠', 
+      description: 'Test your memory skills',
+      type: 'memory'
+    },
+    { 
+      id: 3, 
+      name: 'Word Search', 
+      icon: '🔍', 
+      description: 'Find hidden words',
+      type: 'wordsearch'
+    },
+    { 
+      id: 4, 
+      name: 'Math Challenge', 
+      icon: '➕', 
+      description: 'Practice math skills',
+      type: 'math'
+    },
+    { 
+      id: 5, 
+      name: 'Science Quiz', 
+      icon: '🔬', 
+      description: 'Test science knowledge',
+      type: 'science'
+    },
+  ]);
+
+  const handleGamePress = (game: Game) => {
+    Alert.alert(
+      'Coming Soon!',
+      `${game.name} will be available soon. Stay tuned!`,
+      [{ text: 'OK' }]
+    );
+  };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Educational Games</Text>
-        <Text style={styles.subtitle}>Learn while having fun!</Text>
-      </View>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.title}>Educational Games</Text>
+          <Text style={styles.subtitle}>Learn while having fun!</Text>
+        </View>
 
-      <View style={styles.gamesGrid}>
-        {games.map((game) => (
-          <TouchableOpacity key={game.id} style={styles.gameCard}>
-            <Text style={styles.gameIcon}>{game.icon}</Text>
-            <Text style={styles.gameName}>{game.name}</Text>
-            <Text style={styles.gameDescription}>{game.description}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+        {/* Games Grid */}
+        <View style={styles.gamesGrid}>
+          {games.map((game) => (
+            <TouchableOpacity
+              key={game.id}
+              style={styles.gameCard}
+              onPress={() => handleGamePress(game)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.gameIcon}>{game.icon}</Text>
+              <Text style={styles.gameName}>{game.name}</Text>
+              <Text style={styles.gameDescription}>{game.description}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
 
-      <View style={styles.comingSoon}>
-        <Text style={styles.comingSoonText}>More games coming soon!</Text>
-      </View>
-    </ScrollView>
+        {/* Coming Soon */}
+        <View style={styles.comingSoon}>
+          <Text style={styles.comingSoonText}>More games coming soon!</Text>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: COLORS.background,
   },
   header: {
-    backgroundColor: '#007AFF',
+    backgroundColor: COLORS.primary,
     padding: 20,
-    paddingTop: 40,
+    paddingTop: 20,
+    paddingBottom: 30,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: 'white',
+    color: COLORS.white,
   },
   subtitle: {
     fontSize: 16,
@@ -64,7 +125,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   gameCard: {
-    backgroundColor: 'white',
+    backgroundColor: COLORS.white,
     borderRadius: 15,
     padding: 20,
     marginBottom: 15,
@@ -75,6 +136,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   gameIcon: {
     fontSize: 40,
@@ -84,10 +147,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     textAlign: 'center',
+    color: COLORS.textPrimary,
   },
   gameDescription: {
     fontSize: 12,
-    color: '#666',
+    color: COLORS.textSecondary,
     textAlign: 'center',
     marginTop: 5,
   },
@@ -97,7 +161,7 @@ const styles = StyleSheet.create({
   },
   comingSoonText: {
     fontSize: 16,
-    color: '#666',
+    color: COLORS.textSecondary,
     fontStyle: 'italic',
   },
 });

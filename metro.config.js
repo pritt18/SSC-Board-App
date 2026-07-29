@@ -2,14 +2,15 @@ const { getDefaultConfig } = require('expo/metro-config');
 
 const config = getDefaultConfig(__dirname);
 
-// SRT files (Subtitles) ko allow karne ke liye
+// Add support for additional file types
 if (!config.resolver.assetExts.includes('srt')) {
   config.resolver.assetExts.push('srt');
 }
-
-// PDF files ko allow karne ke liye
 if (!config.resolver.assetExts.includes('pdf')) {
   config.resolver.assetExts.push('pdf');
+}
+if (!config.resolver.assetExts.includes('enc')) {
+  config.resolver.assetExts.push('enc');
 }
 
 module.exports = config;

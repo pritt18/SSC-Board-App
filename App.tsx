@@ -8,7 +8,7 @@ import { LanguageProvider } from './src/context/LanguageContext';
 import AppNavigator from './src/navigation/AppNavigator';
 import { initializeDatabase } from './src/database/database';
 import { seedDatabase } from './src/database/seeders/seedDatabase';
-import { LogBox, View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import { LogBox, View, Text, ActivityIndicator, StyleSheet, Platform } from 'react-native';
 
 // Ignore specific warnings
 LogBox.ignoreAllLogs();
@@ -19,6 +19,13 @@ export default function App() {
   useEffect(() => {
     const setupDatabase = async () => {
       try {
+        // Skip SQLite on web (for development)
+        if (Platform.OS === 'web') {
+          console.log('Web platform - skipping SQLite');
+          setIsReady(true);
+          return;
+        }
+
         console.log('Initializing database...');
         await initializeDatabase();
         console.log('Seeding database...');
@@ -40,6 +47,20 @@ export default function App() {
         <ActivityIndicator size="large" color="#007AFF" />
         <Text style={styles.loadingText}>Loading...</Text>
       </View>
+    );
+  }
+
+  // For web, show a message
+  if (Platform.OS === 'web') {
+    return (
+      <SafeAreaProvider>
+        <StatusBar style="auto" />
+        <View style={styles.webContainer}>
+          <Text style={styles.webTitle}>SSC Board App</Text>
+          <Text style={styles.webSubtitle}>Please use mobile app for full features</Text>
+          <Text style={styles.webNote}>Open with Expo Go or development build on Android/iOS</Text>
+        </View>
+      </SafeAreaProvider>
     );
   }
 
@@ -68,5 +89,28 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 16,
     color: '#666',
+  },
+  webContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#f5f5f5',
+  },
+  webTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#007AFF',
+    marginBottom: 10,
+  },
+  webSubtitle: {
+    fontSize: 18,
+    color: '#333',
+    marginBottom: 20,
+  },
+  webNote: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
   },
 });

@@ -66,16 +66,13 @@ const quizData: Record<
 > = {
   1: {
     id: 1,
-    title:
-      'Mathematics Practice Quiz',
+    title: 'Mathematics Practice Quiz',
     timeLimit: 5,
     passingPercentage: 40,
-
     questions: [
       {
         id: 1,
-        question:
-          'What is 5 + 3?',
+        question: 'What is 5 + 3?',
         options: {
           a: '6',
           b: '7',
@@ -83,14 +80,11 @@ const quizData: Record<
           d: '9',
         },
         correctAnswer: 'c',
-        explanation:
-          '5 + 3 equals 8.',
+        explanation: '5 + 3 equals 8.',
       },
-
       {
         id: 2,
-        question:
-          'What is 10 - 4?',
+        question: 'What is 10 - 4?',
         options: {
           a: '5',
           b: '6',
@@ -98,14 +92,11 @@ const quizData: Record<
           d: '8',
         },
         correctAnswer: 'b',
-        explanation:
-          '10 - 4 equals 6.',
+        explanation: '10 - 4 equals 6.',
       },
-
       {
         id: 3,
-        question:
-          'What is 3 × 4?',
+        question: 'What is 3 × 4?',
         options: {
           a: '7',
           b: '10',
@@ -113,14 +104,11 @@ const quizData: Record<
           d: '14',
         },
         correctAnswer: 'c',
-        explanation:
-          '3 multiplied by 4 equals 12.',
+        explanation: '3 multiplied by 4 equals 12.',
       },
-
       {
         id: 4,
-        question:
-          'What is 20 ÷ 5?',
+        question: 'What is 20 ÷ 5?',
         options: {
           a: '2',
           b: '3',
@@ -128,14 +116,11 @@ const quizData: Record<
           d: '5',
         },
         correctAnswer: 'c',
-        explanation:
-          '20 divided by 5 equals 4.',
+        explanation: '20 divided by 5 equals 4.',
       },
-
       {
         id: 5,
-        question:
-          'Which number is the largest?',
+        question: 'Which number is the largest?',
         options: {
           a: '12',
           b: '25',
@@ -143,24 +128,20 @@ const quizData: Record<
           d: '20',
         },
         correctAnswer: 'b',
-        explanation:
-          '25 is the largest number.',
+        explanation: '25 is the largest number.',
       },
     ],
   },
 
   2: {
     id: 2,
-    title:
-      'Mathematics Mock Test',
+    title: 'Mathematics Mock Test',
     timeLimit: 10,
     passingPercentage: 40,
-
     questions: [
       {
         id: 101,
-        question:
-          'What is 7 + 8?',
+        question: 'What is 7 + 8?',
         options: {
           a: '13',
           b: '14',
@@ -168,14 +149,11 @@ const quizData: Record<
           d: '16',
         },
         correctAnswer: 'c',
-        explanation:
-          '7 + 8 equals 15.',
+        explanation: '7 + 8 equals 15.',
       },
-
       {
         id: 102,
-        question:
-          'What is 6 × 5?',
+        question: 'What is 6 × 5?',
         options: {
           a: '25',
           b: '30',
@@ -183,14 +161,11 @@ const quizData: Record<
           d: '40',
         },
         correctAnswer: 'b',
-        explanation:
-          '6 multiplied by 5 equals 30.',
+        explanation: '6 multiplied by 5 equals 30.',
       },
-
       {
         id: 103,
-        question:
-          'What is 50 - 20?',
+        question: 'What is 50 - 20?',
         options: {
           a: '20',
           b: '25',
@@ -198,14 +173,11 @@ const quizData: Record<
           d: '35',
         },
         correctAnswer: 'c',
-        explanation:
-          '50 - 20 equals 30.',
+        explanation: '50 - 20 equals 30.',
       },
-
       {
         id: 104,
-        question:
-          'What is 36 ÷ 6?',
+        question: 'What is 36 ÷ 6?',
         options: {
           a: '5',
           b: '6',
@@ -213,14 +185,11 @@ const quizData: Record<
           d: '8',
         },
         correctAnswer: 'b',
-        explanation:
-          '36 divided by 6 equals 6.',
+        explanation: '36 divided by 6 equals 6.',
       },
-
       {
         id: 105,
-        question:
-          'Which is the smallest number?',
+        question: 'Which is the smallest number?',
         options: {
           a: '15',
           b: '8',
@@ -228,8 +197,421 @@ const quizData: Record<
           d: '20',
         },
         correctAnswer: 'b',
-        explanation:
-          '8 is the smallest number.',
+        explanation: '8 is the smallest number.',
+      },
+    ],
+  },
+
+  3: {
+    id: 3,
+    title: 'Science Quiz: Basic Physics',
+    timeLimit: 5,
+    passingPercentage: 40,
+    questions: [
+      {
+        id: 201,
+        question: 'What is the unit of force?',
+        options: {
+          a: 'Joule',
+          b: 'Newton',
+          c: 'Watt',
+          d: 'Pascal',
+        },
+        correctAnswer: 'b',
+        explanation: 'Newton (N) is the SI unit of force.',
+      },
+      {
+        id: 202,
+        question: 'What is the speed of light approximately?',
+        options: {
+          a: '3 × 10⁶ m/s',
+          b: '3 × 10⁸ m/s',
+          c: '3 × 10¹⁰ m/s',
+          d: '3 × 10⁴ m/s',
+        },
+        correctAnswer: 'b',
+        explanation: 'The speed of light is approximately 3 × 10⁸ meters per second.',
+      },
+      {
+        id: 203,
+        question: 'What is the SI unit of energy?',
+        options: {
+          a: 'Watt',
+          b: 'Joule',
+          c: 'Newton',
+          d: 'Pascal',
+        },
+        correctAnswer: 'b',
+        explanation: 'Joule (J) is the SI unit of energy.',
+      },
+      {
+        id: 204,
+        question: 'What force keeps planets in orbit?',
+        options: {
+          a: 'Magnetic force',
+          b: 'Gravitational force',
+          c: 'Electrostatic force',
+          d: 'Nuclear force',
+        },
+        correctAnswer: 'b',
+        explanation: 'Gravitational force keeps planets in orbit around the sun.',
+      },
+      {
+        id: 205,
+        question: 'What is the boiling point of water?',
+        options: {
+          a: '50°C',
+          b: '80°C',
+          c: '100°C',
+          d: '120°C',
+        },
+        correctAnswer: 'c',
+        explanation: 'Water boils at 100°C at standard atmospheric pressure.',
+      },
+    ],
+  },
+
+  4: {
+    id: 4,
+    title: 'Science Quiz: Biology Basics',
+    timeLimit: 5,
+    passingPercentage: 40,
+    questions: [
+      {
+        id: 301,
+        question: 'What is the largest organ in the human body?',
+        options: {
+          a: 'Liver',
+          b: 'Brain',
+          c: 'Skin',
+          d: 'Heart',
+        },
+        correctAnswer: 'c',
+        explanation: 'The skin is the largest organ in the human body.',
+      },
+      {
+        id: 302,
+        question: 'What is the powerhouse of the cell?',
+        options: {
+          a: 'Nucleus',
+          b: 'Ribosome',
+          c: 'Mitochondria',
+          d: 'Golgi apparatus',
+        },
+        correctAnswer: 'c',
+        explanation: 'Mitochondria are known as the powerhouse of the cell.',
+      },
+      {
+        id: 303,
+        question: 'What is the normal human body temperature?',
+        options: {
+          a: '36.5°C',
+          b: '37.0°C',
+          c: '37.5°C',
+          d: '38.0°C',
+        },
+        correctAnswer: 'b',
+        explanation: 'Normal human body temperature is 37.0°C or 98.6°F.',
+      },
+      {
+        id: 304,
+        question: 'What is the basic unit of life?',
+        options: {
+          a: 'Atom',
+          b: 'Molecule',
+          c: 'Cell',
+          d: 'Tissue',
+        },
+        correctAnswer: 'c',
+        explanation: 'The cell is the basic unit of life.',
+      },
+      {
+        id: 305,
+        question: 'Which blood type is the universal donor?',
+        options: {
+          a: 'A+',
+          b: 'B+',
+          c: 'AB+',
+          d: 'O-',
+        },
+        correctAnswer: 'd',
+        explanation: 'O- is the universal donor blood type.',
+      },
+    ],
+  },
+
+  5: {
+    id: 5,
+    title: 'General Knowledge Quiz',
+    timeLimit: 5,
+    passingPercentage: 40,
+    questions: [
+      {
+        id: 401,
+        question: 'What is the capital of France?',
+        options: {
+          a: 'London',
+          b: 'Paris',
+          c: 'Rome',
+          d: 'Madrid',
+        },
+        correctAnswer: 'b',
+        explanation: 'Paris is the capital of France.',
+      },
+      {
+        id: 402,
+        question: 'Which is the largest ocean on Earth?',
+        options: {
+          a: 'Atlantic Ocean',
+          b: 'Indian Ocean',
+          c: 'Pacific Ocean',
+          d: 'Arctic Ocean',
+        },
+        correctAnswer: 'c',
+        explanation: 'The Pacific Ocean is the largest ocean on Earth.',
+      },
+      {
+        id: 403,
+        question: 'What is the smallest country in the world?',
+        options: {
+          a: 'Monaco',
+          b: 'Vatican City',
+          c: 'San Marino',
+          d: 'Liechtenstein',
+        },
+        correctAnswer: 'b',
+        explanation: 'Vatican City is the smallest country in the world.',
+      },
+      {
+        id: 404,
+        question: 'What is the longest river in the world?',
+        options: {
+          a: 'Amazon',
+          b: 'Nile',
+          c: 'Yangtze',
+          d: 'Mississippi',
+        },
+        correctAnswer: 'b',
+        explanation: 'The Nile is the longest river in the world.',
+      },
+      {
+        id: 405,
+        question: 'What is the chemical symbol for water?',
+        options: {
+          a: 'H2O',
+          b: 'CO2',
+          c: 'NaCl',
+          d: 'HCl',
+        },
+        correctAnswer: 'a',
+        explanation: 'H2O is the chemical formula for water.',
+      },
+    ],
+  },
+
+  6: {
+    id: 6,
+    title: 'English Language Quiz',
+    timeLimit: 5,
+    passingPercentage: 40,
+    questions: [
+      {
+        id: 501,
+        question: 'What is the plural of "child"?',
+        options: {
+          a: 'Childs',
+          b: 'Children',
+          c: 'Childrens',
+          d: 'Childes',
+        },
+        correctAnswer: 'b',
+        explanation: 'The plural of "child" is "children".',
+      },
+      {
+        id: 502,
+        question: 'Which word is a synonym for "happy"?',
+        options: {
+          a: 'Sad',
+          b: 'Joyful',
+          c: 'Angry',
+          d: 'Tired',
+        },
+        correctAnswer: 'b',
+        explanation: '"Joyful" is a synonym for "happy".',
+      },
+      {
+        id: 503,
+        question: 'What is the past tense of "go"?',
+        options: {
+          a: 'Gone',
+          b: 'Went',
+          c: 'Going',
+          d: 'Goes',
+        },
+        correctAnswer: 'b',
+        explanation: 'The past tense of "go" is "went".',
+      },
+      {
+        id: 504,
+        question: 'Which is a correct sentence?',
+        options: {
+          a: 'He go to school.',
+          b: 'He goes to school.',
+          c: 'He going to school.',
+          d: 'He gone to school.',
+        },
+        correctAnswer: 'b',
+        explanation: '"He goes to school" is the correct simple present tense sentence.',
+      },
+      {
+        id: 505,
+        question: 'What is the antonym of "hot"?',
+        options: {
+          a: 'Warm',
+          b: 'Cold',
+          c: 'Boiling',
+          d: 'Scalding',
+        },
+        correctAnswer: 'b',
+        explanation: '"Cold" is the antonym of "hot".',
+      },
+    ],
+  },
+
+  7: {
+    id: 7,
+    title: 'History Quiz',
+    timeLimit: 5,
+    passingPercentage: 40,
+    questions: [
+      {
+        id: 601,
+        question: 'Who was the first President of the United States?',
+        options: {
+          a: 'Thomas Jefferson',
+          b: 'George Washington',
+          c: 'Abraham Lincoln',
+          d: 'John Adams',
+        },
+        correctAnswer: 'b',
+        explanation: 'George Washington was the first President of the United States.',
+      },
+      {
+        id: 602,
+        question: 'When did World War II end?',
+        options: {
+          a: '1943',
+          b: '1944',
+          c: '1945',
+          d: '1946',
+        },
+        correctAnswer: 'c',
+        explanation: 'World War II ended in 1945.',
+      },
+      {
+        id: 603,
+        question: 'What civilization built the pyramids?',
+        options: {
+          a: 'Greek',
+          b: 'Roman',
+          c: 'Egyptian',
+          d: 'Persian',
+        },
+        correctAnswer: 'c',
+        explanation: 'The Egyptian civilization built the pyramids.',
+      },
+      {
+        id: 604,
+        question: 'Who discovered America?',
+        options: {
+          a: 'Ferdinand Magellan',
+          b: 'Christopher Columbus',
+          c: 'Vasco da Gama',
+          d: 'Amerigo Vespucci',
+        },
+        correctAnswer: 'b',
+        explanation: 'Christopher Columbus discovered America in 1492.',
+      },
+      {
+        id: 605,
+        question: 'What was the Renaissance?',
+        options: {
+          a: 'A war',
+          b: 'A cultural movement',
+          c: 'A disease',
+          d: 'A religion',
+        },
+        correctAnswer: 'b',
+        explanation: 'The Renaissance was a cultural movement in Europe.',
+      },
+    ],
+  },
+
+  8: {
+    id: 8,
+    title: 'Geography Quiz',
+    timeLimit: 5,
+    passingPercentage: 40,
+    questions: [
+      {
+        id: 701,
+        question: 'What is the largest continent?',
+        options: {
+          a: 'Africa',
+          b: 'North America',
+          c: 'Asia',
+          d: 'Europe',
+        },
+        correctAnswer: 'c',
+        explanation: 'Asia is the largest continent.',
+      },
+      {
+        id: 702,
+        question: 'Which is the driest continent?',
+        options: {
+          a: 'Africa',
+          b: 'Australia',
+          c: 'Antarctica',
+          d: 'South America',
+        },
+        correctAnswer: 'c',
+        explanation: 'Antarctica is the driest continent.',
+      },
+      {
+        id: 703,
+        question: 'What is the longest mountain range?',
+        options: {
+          a: 'Himalayas',
+          b: 'Andes',
+          c: 'Rockies',
+          d: 'Alps',
+        },
+        correctAnswer: 'b',
+        explanation: 'The Andes is the longest mountain range in the world.',
+      },
+      {
+        id: 704,
+        question: 'Which country has the most population?',
+        options: {
+          a: 'India',
+          b: 'China',
+          c: 'USA',
+          d: 'Indonesia',
+        },
+        correctAnswer: 'a',
+        explanation: 'India has the highest population in the world.',
+      },
+      {
+        id: 705,
+        question: 'What is the capital of Japan?',
+        options: {
+          a: 'Seoul',
+          b: 'Beijing',
+          c: 'Bangkok',
+          d: 'Tokyo',
+        },
+        correctAnswer: 'd',
+        explanation: 'Tokyo is the capital of Japan.',
       },
     ],
   },
