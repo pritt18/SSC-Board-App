@@ -9,6 +9,7 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -17,7 +18,7 @@ const LoginScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, lastLoginError } = useAuth();
   const { t } = useLanguage();
 
   const handleLogin = async () => {
@@ -34,6 +35,8 @@ const LoginScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
       if (success) {
         console.log('Login successful!');
         // Navigation will happen automatically via AuthContext
+      } else if (lastLoginError === 'This account is already activated on another device.') {
+        Alert.alert('Device Not Recognized', lastLoginError + '\n\nPlease contact admin to reset your device.');
       } else {
         Alert.alert('Login Failed', 'Invalid email or password. Please try again.\n\n💡 Demo credentials:\nadmin@sscboard.com / Admin@123');
       }
@@ -51,7 +54,11 @@ const LoginScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.content}>
-        <Text style={styles.title}>📚 SSC Board App</Text>
+        <Image
+          source={require('../../../assets/images/logo.png')}
+          style={styles.logoImage}
+          resizeMode="contain"
+        />
         <Text style={styles.subtitle}>Maharashtra Board Learning</Text>
 
         <View style={styles.demoInfo}>
@@ -118,6 +125,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 10,
     color: '#007AFF',
+  },
+  logoImage: {
+    width: 220,
+    height: 150,
+    alignSelf: 'center',
+    marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,

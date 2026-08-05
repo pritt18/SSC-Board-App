@@ -10,6 +10,7 @@ import {
   Alert,
   ActivityIndicator,
   ScrollView,
+  Image,
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -68,7 +69,11 @@ const RegisterScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.content}>
-          <Text style={styles.title}>📚 Create Account</Text>
+          <Image
+            source={require('../../../assets/images/logo.png')}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
           <Text style={styles.subtitle}>Join SSC Board Learning</Text>
 
           <TextInput
@@ -144,6 +149,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 10,
     color: '#007AFF',
+  },
+  logoImage: {
+    width: 200,
+    height: 136,
+    alignSelf: 'center',
+    marginBottom: 6,
   },
   subtitle: {
     fontSize: 16,

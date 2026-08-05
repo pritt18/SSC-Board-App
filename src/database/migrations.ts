@@ -35,13 +35,15 @@ export const migrations: string[] = [
     role TEXT NOT NULL CHECK(role IN ('admin', 'teacher', 'parent', 'student', 'distributor')),
     medium TEXT CHECK(medium IN ('marathi', 'english')),
     class_id INTEGER,
+    parent_id INTEGER,
     device_id TEXT,
     permissions TEXT DEFAULT 'user',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     is_active BOOLEAN DEFAULT 1,
     is_approved BOOLEAN DEFAULT 1,
-    FOREIGN KEY (class_id) REFERENCES classes(id)
+    FOREIGN KEY (class_id) REFERENCES classes(id),
+    FOREIGN KEY (parent_id) REFERENCES users(id)
   )`,
 
   // Chapters Table
@@ -234,4 +236,9 @@ export const migrations: string[] = [
   `CREATE INDEX IF NOT EXISTS idx_bookmarks_subject ON bookmarks(subject_id)`,
   `CREATE INDEX IF NOT EXISTS idx_quiz_attempts_user ON quiz_attempts(user_id)`,
   `CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id)`,
+
+  // Defensive: ensure parent_id exists even if a future change stops
+  // dropping/recreating the users table above.
+  `ALTER TABLE users ADD COLUMN parent_id INTEGER REFERENCES users(id)`,
+  `CREATE INDEX IF NOT EXISTS idx_users_parent ON users(parent_id)`,
 ];

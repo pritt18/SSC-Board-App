@@ -57,9 +57,10 @@ export class LicenseService {
       const existing = await executeQuery(
         `SELECT * FROM licenses 
          WHERE license_key = ? 
+         AND class_id = ?
          AND is_active = 1 
          AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)`,
-        [licenseKey]
+        [licenseKey, classId]
       );
 
       if (existing.length === 0) return false;
@@ -82,6 +83,71 @@ export class LicenseService {
       return true;
     } catch (error) {
       console.error('License activation error:', error);
+      return false;
+    }
+  };
+
+  // Generates a random, unassigned license key (not tied to any user yet).
+  // Used by the admin panel when creating new licenses to sell/distribute.
+  static generateStandaloneKey = async (): Promise<string> => {
+    const random = Math.random().toString(36).substring(2) + Date.now().toString(36);
+    const hash = await Crypto.digestStringAsync(
+      Crypto.CryptoDigestAlgorithm.SHA256,
+      random
+    );
+    const formatted = hash.substring(0, 16).toUpperCase();
+    return formatted.replace(/(.{4})/g, '$1-').replace(/-$/, '');
+  };
+
+  // Admin: create a single unassigned license for a class, optionally with an expiry date.
+  // expiresAt should be an ISO date string (e.g. '2027-04-30') or null for a lifetime license.
+  static createLicense = async (
+    classId: number,
+    expiresAt: string | null
+  ): Promise<string> => {
+    const licenseKey = await LicenseService.generateStandaloneKey();
+
+    await executeQuery(
+      `INSERT INTO licenses (license_key, class_id, expires_at, is_active)
+       VALUES (?, ?, ?, 1)`,
+      [licenseKey, classId, expiresAt]
+    );
+
+    return licenseKey;
+  };
+
+  // Admin: create many unassigned licenses at once for a class.
+  static createBulkLicenses = async (
+    classId: number,
+    count: number,
+    expiresAt: string | null
+  ): Promise<string[]> => {
+    const keys: string[] = [];
+    for (let i = 0; i < count; i++) {
+      const key = await LicenseService.createLicense(classId, expiresAt);
+      keys.push(key);
+    }
+    return keys;
+  };
+
+  // Student-side gate check: does this user have an active, non-expired license
+  // for this specific class? Used to lock/unlock class content.
+  static isClassLicensed = async (
+    userId: number,
+    classId: number
+  ): Promise<boolean> => {
+    try {
+      const result = await executeQuery(
+        `SELECT * FROM licenses
+         WHERE user_id = ?
+         AND class_id = ?
+         AND is_active = 1
+         AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)`,
+        [userId, classId]
+      );
+      return result.length > 0;
+    } catch (error) {
+      console.error('Error checking class license:', error);
       return false;
     }
   };

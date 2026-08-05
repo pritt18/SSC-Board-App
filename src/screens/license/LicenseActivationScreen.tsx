@@ -15,14 +15,21 @@ import { COLORS } from '../../constants/colors';
 interface Props {
   onActivated?: () => void;
   classId?: number;
+  navigation?: any;
+  route?: { params?: { classId?: number } };
 }
 
-const LicenseActivationScreen: React.FC<Props> = ({ onActivated, classId: propClassId }) => {
+const LicenseActivationScreen: React.FC<Props> = ({
+  onActivated,
+  classId: propClassId,
+  navigation,
+  route,
+}) => {
   const [licenseKey, setLicenseKey] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
-  
-  const classId = propClassId || user?.class_id || 1;
+
+  const classId = propClassId || route?.params?.classId || user?.class_id || 1;
 
   const handleActivate = async () => {
     if (!licenseKey.trim()) {
@@ -47,6 +54,8 @@ const LicenseActivationScreen: React.FC<Props> = ({ onActivated, classId: propCl
         Alert.alert('Success', 'License activated successfully!');
         if (onActivated) {
           onActivated();
+        } else if (navigation) {
+          navigation.replace('SubjectList', { classId });
         }
       } else {
         Alert.alert('Error', 'Invalid or already used activation code.');

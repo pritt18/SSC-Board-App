@@ -39,6 +39,9 @@ const UserDetailScreen: React.FC<Props> = ({ navigation, route }) => {
   const { userId } = route.params;
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<UserDetail | null>(null);
+  const [linkedChildren, setLinkedChildren] = useState<
+    { id: number; full_name: string; email: string; class_number: number | null }[]
+  >([]);
   const [stats, setStats] = useState({
     videosWatched: 0,
     quizzesCompleted: 0,
@@ -109,6 +112,21 @@ const UserDetailScreen: React.FC<Props> = ({ navigation, route }) => {
         totalQuizzes: totalQ,
         progress,
       });
+
+      // If this user is a parent, load which students are linked to them.
+      if ((userResult[0] as UserDetail).role === 'parent') {
+        const children = await executeQuery(
+          `SELECT u.id, u.full_name, u.email, c.class_number
+           FROM users u
+           LEFT JOIN classes c ON u.class_id = c.id
+           WHERE u.parent_id = ?
+           ORDER BY u.full_name ASC`,
+          [userId]
+        );
+        setLinkedChildren(children as any[]);
+      } else {
+        setLinkedChildren([]);
+      }
 
     } catch (error) {
       console.error('Error loading user details:', error);
@@ -361,6 +379,42 @@ const UserDetailScreen: React.FC<Props> = ({ navigation, route }) => {
             </Text>
           </TouchableOpacity>
 
+          {user.device_id && (
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => {
+                Alert.alert(
+                  'Reset Device',
+                  `This will unbind ${user.full_name}'s account from their current device, so they can log in on a new phone. Continue?`,
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                      text: 'Reset Device',
+                      style: 'destructive',
+                      onPress: async () => {
+                        try {
+                          await executeQuery(
+                            `UPDATE users SET device_id = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+                            [user.id]
+                          );
+                          Alert.alert('Success', 'Device reset. The user can now log in on a new device.');
+                          loadUserData();
+                        } catch (error) {
+                          Alert.alert('Error', 'Failed to reset device');
+                        }
+                      },
+                    },
+                  ]
+                );
+              }}
+            >
+              <Ionicons name="phone-portrait-outline" size={20} color="#F59E0B" />
+              <Text style={[styles.actionButtonText, { color: '#F59E0B' }]}>
+                Reset Device
+              </Text>
+            </TouchableOpacity>
+          )}
+
           <TouchableOpacity
             style={[styles.actionButton, styles.deleteAction]}
             onPress={() => {
@@ -392,6 +446,68 @@ const UserDetailScreen: React.FC<Props> = ({ navigation, route }) => {
             </Text>
           </TouchableOpacity>
         </View>
+
+        {/* Linked Children Section (parents only) */}
+        {user.role === 'parent' && (
+          <View style={styles.actionsSection}>
+            <View style={styles.linkedChildrenHeader}>
+              <Text style={styles.sectionTitle}>Linked Children</Text>
+              <TouchableOpacity
+                style={styles.linkChildButton}
+                onPress={() => navigation.navigate('LinkChild', { parentId: user.id })}
+              >
+                <Ionicons name="add" size={16} color={COLORS.white} />
+                <Text style={styles.linkChildButtonText}>Link Child</Text>
+              </TouchableOpacity>
+            </View>
+
+            {linkedChildren.length === 0 ? (
+              <Text style={styles.noChildrenText}>
+                No children linked yet. Tap "Link Child" to connect a student account.
+              </Text>
+            ) : (
+              linkedChildren.map((child) => (
+                <View key={child.id} style={styles.childRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.childName}>{child.full_name}</Text>
+                    <Text style={styles.childMeta}>
+                      {child.email}
+                      {child.class_number ? ` • Class ${child.class_number}` : ''}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => {
+                      Alert.alert(
+                        'Unlink Child',
+                        `Remove ${child.full_name} from ${user.full_name}'s linked children?`,
+                        [
+                          { text: 'Cancel', style: 'cancel' },
+                          {
+                            text: 'Unlink',
+                            style: 'destructive',
+                            onPress: async () => {
+                              try {
+                                await executeQuery(
+                                  `UPDATE users SET parent_id = NULL WHERE id = ?`,
+                                  [child.id]
+                                );
+                                loadUserData();
+                              } catch (error) {
+                                Alert.alert('Error', 'Failed to unlink child');
+                              }
+                            },
+                          },
+                        ]
+                      );
+                    }}
+                  >
+                    <Text style={styles.unlinkText}>Unlink</Text>
+                  </TouchableOpacity>
+                </View>
+              ))
+            )}
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -585,6 +701,53 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: '#E2E8F0',
+  },
+  linkedChildrenHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  linkChildButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 4,
+  },
+  linkChildButtonText: {
+    color: COLORS.white,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  noChildrenText: {
+    color: COLORS.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  childRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  childName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
+  },
+  childMeta: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    marginTop: 2,
+  },
+  unlinkText: {
+    color: '#DC2626',
+    fontSize: 13,
+    fontWeight: '600',
   },
   actionButton: {
     flexDirection: 'row',

@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User, UserModel } from '../database/models/User';
+import { LicenseService } from '../services/licenseService';
 
 interface AuthContextType {
   user: User | null;
@@ -10,6 +11,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   updateUser: (userData: Partial<User>) => Promise<void>;
   isAuthenticated: boolean;
+  lastLoginError: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -17,6 +19,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [lastLoginError, setLastLoginError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -38,6 +41,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
+    setLastLoginError(null);
     try {
       console.log('Attempting login with:', email);
       
@@ -52,20 +56,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('Stored hash:', userData.password_hash);
         
         if (userData.password_hash === expectedHash) {
+          // --- Device binding check (SRS section 18: one account = one device) ---
+          const currentDeviceId = await LicenseService.getDeviceId();
+
+          if (!userData.device_id) {
+            // First login on any device: bind this device to the account.
+            await UserModel.updateDeviceId(userData.id as number, currentDeviceId);
+            userData.device_id = currentDeviceId;
+          } else if (userData.device_id !== currentDeviceId) {
+            // Account is already bound to a different device.
+            console.log('Login blocked: account already activated on another device');
+            setLastLoginError('This account is already activated on another device.');
+            return false;
+          }
+          // --- End device binding check ---
+
           setUser(userData);
           await AsyncStorage.setItem('user', JSON.stringify(userData));
           console.log('Login successful!');
           return true;
         } else {
           console.log('Password mismatch');
+          setLastLoginError('Invalid email or password.');
           return false;
         }
       }
       
       console.log('User not found');
+      setLastLoginError('Invalid email or password.');
       return false;
     } catch (error) {
       console.error('Login error:', error);
+      setLastLoginError('An error occurred. Please try again.');
       return false;
     } finally {
       setIsLoading(false);
@@ -147,6 +169,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout,
         updateUser,
         isAuthenticated: !!user,
+        lastLoginError,
       }}
     >
       {children}

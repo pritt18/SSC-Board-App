@@ -15,6 +15,8 @@ import ManageQuizzesScreen from '../screens/admin/ManageQuizzesScreen';
 import AddQuizScreen from '../screens/admin/AddQuizScreen';
 import EditQuizScreen from '../screens/admin/EditQuizScreen';
 import ManageLicensesScreen from '../screens/admin/ManageLicensesScreen';
+import GenerateLicenseScreen from '../screens/admin/GenerateLicenseScreen';
+import LinkChildScreen from '../screens/admin/LinkChildScreen';
 import ViewProgressScreen from '../screens/admin/ViewProgressScreen';
 import ManageClassesScreen from '../screens/admin/ManageClassesScreen';
 import ManageSubjectsScreen from '../screens/admin/ManageSubjectsScreen';
@@ -36,6 +38,8 @@ export type AdminStackParamList = {
   AddQuiz: undefined;
   EditQuiz: { quizId: number };
   ManageLicenses: undefined;
+  GenerateLicense: undefined;
+  LinkChild: { parentId: number };
   ViewProgress: undefined;
   ManageClasses: undefined;
   ManageSubjects: { classId: number };
@@ -66,6 +70,8 @@ const AdminNavigator: React.FC = () => {
       <Stack.Screen name="AddQuiz" component={AddQuizScreen} />
       <Stack.Screen name="EditQuiz" component={EditQuizScreen} />
       <Stack.Screen name="ManageLicenses" component={ManageLicensesScreen} />
+      <Stack.Screen name="GenerateLicense" component={GenerateLicenseScreen} />
+      <Stack.Screen name="LinkChild" component={LinkChildScreen} />
       <Stack.Screen name="ViewProgress" component={ViewProgressScreen} />
       <Stack.Screen name="ManageClasses" component={ManageClassesScreen} />
       <Stack.Screen name="ManageSubjects" component={ManageSubjectsScreen} />

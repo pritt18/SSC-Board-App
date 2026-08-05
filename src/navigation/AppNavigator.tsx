@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import AuthNavigator from './AuthNavigator';
 import StudentNavigator from './StudentNavigator';
 import AdminNavigator from './AdminNavigator';
+import ParentNavigator from './ParentNavigator';
 import LanguageSelectionScreen from '../screens/language/LanguageSelectionScreen';
 import { RootStackParamList } from './navigationTypes';
 
@@ -34,6 +35,10 @@ const AppNavigator: React.FC = () => {
       ) : user?.role === 'admin' ? (
         <Stack.Screen name="Main">
           {() => <AdminNavigator />}
+        </Stack.Screen>
+      ) : user?.role === 'parent' ? (
+        <Stack.Screen name="Main">
+          {() => <ParentNavigator />}
         </Stack.Screen>
       ) : user?.role === 'student' &&
         !isMediumSelected ? (

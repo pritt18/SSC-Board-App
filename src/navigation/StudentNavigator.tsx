@@ -18,6 +18,7 @@ import QuizScreen from '../screens/quiz/QuizScreen';
 import QuizResultScreen from '../screens/quiz/QuizResultScreen';
 import NotesScreen from '../screens/learning/notes/NotesScreen';
 import PdfDisplayScreen from '../screens/learning/PdfDisplayScreen';
+import LicenseActivationScreen from '../screens/license/LicenseActivationScreen';
 import { COLORS } from '../constants/colors';
 
 import {
@@ -37,6 +38,7 @@ const LearningStack: React.FC = () => {
       }}
     >
       <Stack.Screen name="ClassList" component={ClassListScreen} />
+      <Stack.Screen name="LicenseActivation" component={LicenseActivationScreen} />
       <Stack.Screen name="SubjectList" component={SubjectListScreen} />
       <Stack.Screen name="LearningContent" component={LearningContentScreen}/>
       <Stack.Screen name="VideoPlayer" component={VideoPlayerScreen} />

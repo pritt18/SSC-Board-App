@@ -62,8 +62,20 @@ export type StudentTabParamList = {
   Profile: undefined;
 };
 
+export type ParentTabParamList = {
+  ParentDashboard: undefined;
+  ParentProgress: undefined;
+  ParentQuizResults: undefined;
+  ParentStudyTime: undefined;
+  ParentNotifications: undefined;
+};
+
 export type LearningStackParamList = {
   ClassList: undefined;
+
+  LicenseActivation: {
+    classId: number;
+  };
 
   SubjectList: {
     classId: number;

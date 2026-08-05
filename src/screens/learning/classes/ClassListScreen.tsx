@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -9,9 +9,11 @@ import {
 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
 
 import { COLORS } from '../../../constants/colors';
 import { useAuth } from '../../../context/AuthContext';
+import { LicenseService } from '../../../services/licenseService';
 
 import {
   LearningStackParamList,
@@ -40,6 +42,36 @@ const MyClassesScreen: React.FC<Props> = ({
 }) => {
   const { user } = useAuth();
 
+  const [isLicensed, setIsLicensed] = useState<boolean | null>(null);
+  const [checkingLicense, setCheckingLicense] = useState(true);
+
+  useFocusEffect(
+    useCallback(() => {
+      const checkLicense = async () => {
+        if (!user?.id || !user?.class_id) {
+          setIsLicensed(null);
+          setCheckingLicense(false);
+          return;
+        }
+        setCheckingLicense(true);
+        try {
+          const licensed = await LicenseService.isClassLicensed(
+            user.id,
+            user.class_id,
+          );
+          setIsLicensed(licensed);
+        } catch (error) {
+          console.error('Error checking license:', error);
+          setIsLicensed(false);
+        } finally {
+          setCheckingLicense(false);
+        }
+      };
+
+      checkLicense();
+    }, [user?.id, user?.class_id]),
+  );
+
   const handleClassPress = (
     classId: number,
     unlocked: boolean,
@@ -48,9 +80,15 @@ const MyClassesScreen: React.FC<Props> = ({
       return;
     }
 
-    navigation.navigate('SubjectList', {
-      classId,
-    });
+    if (isLicensed) {
+      navigation.navigate('SubjectList', {
+        classId,
+      });
+    } else {
+      navigation.navigate('LicenseActivation', {
+        classId,
+      });
+    }
   };
 
   return (
@@ -127,14 +165,18 @@ const MyClassesScreen: React.FC<Props> = ({
                   style={[
                     styles.status,
 
-                    unlocked
+                    unlocked && isLicensed
                       ? styles.unlockedText
                       : styles.lockedText,
                   ]}
                 >
-                  {unlocked
-                    ? 'Unlocked'
-                    : '🔒 Locked'}
+                  {!unlocked
+                    ? '🔒 Locked'
+                    : checkingLicense
+                    ? 'Checking...'
+                    : isLicensed
+                    ? '✓ Unlocked'
+                    : '🔑 Activate License'}
                 </Text>
               </Pressable>
             );

@@ -23,13 +23,15 @@ export const schema: string[] = [
     role TEXT NOT NULL CHECK(role IN ('admin', 'teacher', 'parent', 'student', 'distributor')),
     medium TEXT CHECK(medium IN ('marathi', 'english')),
     class_id INTEGER,
+    parent_id INTEGER,
     device_id TEXT,
     permissions TEXT DEFAULT 'user',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     is_active BOOLEAN DEFAULT 1,
     is_approved BOOLEAN DEFAULT 1,
-    FOREIGN KEY (class_id) REFERENCES classes(id)
+    FOREIGN KEY (class_id) REFERENCES classes(id),
+    FOREIGN KEY (parent_id) REFERENCES users(id)
   )`,
 
   // Subjects Table

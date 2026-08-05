@@ -1,11 +1,13 @@
 import 'setimmediate';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { AuthProvider } from './src/context/AuthContext';
 import { LanguageProvider } from './src/context/LanguageContext';
 import AppNavigator from './src/navigation/AppNavigator';
+import CornerLogo from './src/components/common/CornerLogo';
+import SplashScreen from './src/screens/splash/SplashScreen';
 import { initializeDatabase } from './src/database/database';
 import { seedDatabase } from './src/database/seeders/seedDatabase';
 import { LogBox, View, Text, ActivityIndicator, StyleSheet, Platform } from 'react-native';
@@ -13,8 +15,59 @@ import { LogBox, View, Text, ActivityIndicator, StyleSheet, Platform } from 'rea
 // Ignore specific warnings
 LogBox.ignoreAllLogs();
 
+// Screens that already have their own logo, or a header button in the same
+// top-right corner (Logout / + Add / + Generate) — the watermark is hidden
+// here so it never overlaps existing text/buttons.
+const CORNER_LOGO_HIDDEN_ROUTES = [
+  'Login',
+  'Register',
+  'ForgotPassword',
+  // Every screen in AdminNavigator — nearly all of them have their own
+  // header-right button (Add/Save/Generate/Active-Inactive/Logout etc.)
+  // that the watermark would otherwise sit on top of.
+  'AdminDashboard',
+  'ManageUsers',
+  'UserDetail',
+  'AssignClass',
+  'ManageVideos',
+  'AddVideo',
+  'EditVideo',
+  'ManagePdfs',
+  'AddPdf',
+  'EditPdf',
+  'ManageQuizzes',
+  'AddQuiz',
+  'EditQuiz',
+  'ManageLicenses',
+  'GenerateLicense',
+  'LinkChild',
+  'ViewProgress',
+  'ManageClasses',
+  'ManageSubjects',
+  'AddSubject',
+  'EditSubject',
+  // Parent tabs already show a welcome header with the account name —
+  // the corner watermark was clashing there too.
+  'ParentDashboard',
+  'ParentProgress',
+  'ParentQuizResults',
+  'ParentStudyTime',
+  'ParentNotifications',
+];
+
+const navigationRef = createNavigationContainerRef<any>();
+
 export default function App() {
   const [isReady, setIsReady] = useState(false);
+  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
+  const [showCornerLogo, setShowCornerLogo] = useState(true);
+
+  useEffect(() => {
+    // Keep the splash visible for at least 1.8s so the logo is
+    // actually seen, even if the database initializes instantly.
+    const timer = setTimeout(() => setMinTimeElapsed(true), 1800);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     const setupDatabase = async () => {
@@ -41,13 +94,8 @@ export default function App() {
     setupDatabase();
   }, []);
 
-  if (!isReady) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={styles.loadingText}>Loading...</Text>
-      </View>
-    );
+  if (!isReady || !minTimeElapsed) {
+    return <SplashScreen />;
   }
 
   // For web, show a message
@@ -69,9 +117,22 @@ export default function App() {
       <StatusBar style="auto" />
       <LanguageProvider>
         <AuthProvider>
-          <NavigationContainer>
-            <AppNavigator />
-          </NavigationContainer>
+          <View style={styles.appRoot}>
+            <NavigationContainer
+              ref={navigationRef}
+              onReady={() => {
+                const routeName = navigationRef.getCurrentRoute()?.name;
+                setShowCornerLogo(!CORNER_LOGO_HIDDEN_ROUTES.includes(routeName || ''));
+              }}
+              onStateChange={() => {
+                const routeName = navigationRef.getCurrentRoute()?.name;
+                setShowCornerLogo(!CORNER_LOGO_HIDDEN_ROUTES.includes(routeName || ''));
+              }}
+            >
+              <AppNavigator />
+            </NavigationContainer>
+            {showCornerLogo && <CornerLogo />}
+          </View>
         </AuthProvider>
       </LanguageProvider>
     </SafeAreaProvider>
@@ -79,6 +140,9 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
+  appRoot: {
+    flex: 1,
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',

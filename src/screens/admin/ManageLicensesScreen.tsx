@@ -23,7 +23,8 @@ interface LicenseItem {
   license_key: string;
   user_name: string;
   user_email: string;
-  class_number: number;
+  class_number: number | null;
+  class_name: string | null;
   device_id: string;
   activated_at: string;
   expires_at: string;
@@ -47,6 +48,8 @@ const ManageLicensesScreen: React.FC<Props> = ({ navigation }) => {
           u.full_name as user_name,
           u.email as user_email,
           c.class_number,
+          c.name_english as class_name,
+          l.class_id,
           l.device_id,
           l.activated_at,
           l.expires_at,
@@ -142,6 +145,12 @@ const ManageLicensesScreen: React.FC<Props> = ({ navigation }) => {
           <Text style={styles.backText}>‹</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Manage Licenses</Text>
+        <TouchableOpacity
+          style={styles.generateButton}
+          onPress={() => navigation.navigate('GenerateLicense')}
+        >
+          <Text style={styles.generateButtonText}>+ Generate</Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -166,7 +175,11 @@ const ManageLicensesScreen: React.FC<Props> = ({ navigation }) => {
                     {license.is_active ? 'Active' : 'Inactive'}
                   </Text>
                 </View>
-                <Text style={styles.classText}>Class {license.class_number}</Text>
+                <Text style={styles.classText} numberOfLines={1}>
+                  {license.class_number
+                    ? `Class ${license.class_number}`
+                    : 'Class: Unassigned'}
+                </Text>
               </View>
 
               <View style={styles.cardBody}>
@@ -254,6 +267,17 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
     marginLeft: 10,
   },
+  generateButton: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  generateButtonText: {
+    color: COLORS.white,
+    fontSize: 13,
+    fontWeight: '700',
+  },
   content: {
     padding: 15,
     paddingBottom: 40,
@@ -294,6 +318,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
+    flexShrink: 0,
   },
   activeBadge: {
     backgroundColor: '#DCFCE7',
@@ -312,8 +337,12 @@ const styles = StyleSheet.create({
     color: '#DC2626',
   },
   classText: {
-    fontSize: 12,
+    fontSize: 11,
     color: COLORS.textSecondary,
+    flexShrink: 1,
+    flex: 1,
+    textAlign: 'right',
+    marginLeft: 8,
   },
   cardBody: {
     flexDirection: 'row',
