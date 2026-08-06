@@ -8,6 +8,9 @@ import DashboardScreen from '../screens/student/dashboard/DashboardScreen';
 import ProfileScreen from '../screens/student/profile/ProfileScreen';
 import ProgressScreen from '../screens/progress/ProgressScreen';
 import GamesScreen from '../screens/games/GamesScreen';
+import MemoryMatchScreen from '../screens/games/MemoryMatchScreen';
+import SudokuScreen from '../screens/games/SudokuScreen';
+import CrosswordScreen from '../screens/games/CrosswordScreen';
 import ClassListScreen from '../screens/learning/classes/ClassListScreen';
 import SubjectListScreen from '../screens/learning/subjects/SubjectListScreen';
 import LearningContentScreen from '../screens/learning/LearningContentScreen';
@@ -24,10 +27,12 @@ import { COLORS } from '../constants/colors';
 import {
   StudentTabParamList,
   LearningStackParamList,
+  GamesStackParamList,
 } from './navigationTypes';
 
 const Tab = createBottomTabNavigator<StudentTabParamList>();
 const Stack = createNativeStackNavigator<LearningStackParamList>();
+const GamesStackNav = createNativeStackNavigator<GamesStackParamList>();
 
 const LearningStack: React.FC = () => {
   return (
@@ -49,6 +54,22 @@ const LearningStack: React.FC = () => {
       <Stack.Screen name="Notes" component={NotesScreen} />
       <Stack.Screen name="PdfDisplay" component={PdfDisplayScreen} />
     </Stack.Navigator>
+  );
+};
+
+const GamesStack: React.FC = () => {
+  return (
+    <GamesStackNav.Navigator
+      initialRouteName="GamesHome"
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <GamesStackNav.Screen name="GamesHome" component={GamesScreen} />
+      <GamesStackNav.Screen name="MemoryMatch" component={MemoryMatchScreen} />
+      <GamesStackNav.Screen name="Sudoku" component={SudokuScreen} />
+      <GamesStackNav.Screen name="Crossword" component={CrosswordScreen} />
+    </GamesStackNav.Navigator>
   );
 };
 
@@ -119,7 +140,7 @@ const StudentNavigator: React.FC = () => {
       />
       <Tab.Screen 
         name="Games" 
-        component={GamesScreen}
+        component={GamesStack}
         options={{
           title: 'Games',
         }}

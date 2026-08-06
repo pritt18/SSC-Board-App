@@ -70,6 +70,13 @@ export type ParentTabParamList = {
   ParentNotifications: undefined;
 };
 
+export type GamesStackParamList = {
+  GamesHome: undefined;
+  MemoryMatch: undefined;
+  Sudoku: undefined;
+  Crossword: undefined;
+};
+
 export type LearningStackParamList = {
   ClassList: undefined;
 

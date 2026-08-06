@@ -10,7 +10,7 @@ interface Game {
   name: string;
   icon: string;
   description: string;
-  type: 'crossword' | 'memory' | 'wordsearch' | 'math' | 'science';
+  type: 'crossword' | 'memory' | 'wordsearch' | 'math' | 'science' | 'sudoku';
 }
 
 const GamesScreen: React.FC = ({ navigation }: any) => {
@@ -53,9 +53,29 @@ const GamesScreen: React.FC = ({ navigation }: any) => {
       description: 'Test science knowledge',
       type: 'science'
     },
+    { 
+      id: 6, 
+      name: 'Sudoku', 
+      icon: '🔢', 
+      description: 'Classic number puzzle',
+      type: 'sudoku'
+    },
   ]);
 
   const handleGamePress = (game: Game) => {
+    if (game.type === 'memory') {
+      navigation.navigate('MemoryMatch');
+      return;
+    }
+    if (game.type === 'crossword') {
+      navigation.navigate('Crossword');
+      return;
+    }
+    if (game.type === 'sudoku') {
+      navigation.navigate('Sudoku');
+      return;
+    }
+
     Alert.alert(
       'Coming Soon!',
       `${game.name} will be available soon. Stay tuned!`,
