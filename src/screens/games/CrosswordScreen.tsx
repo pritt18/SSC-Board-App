@@ -44,6 +44,96 @@ const PUZZLES: Puzzle[] = [
       { answer: 'WATER', clue: '3-Across: H2O, essential for life', row: 3, col: 0, direction: 'across' },
     ],
   },
+  {
+    title: 'Weather',
+    size: 7,
+    words: [
+      { answer: 'SUN', clue: '1-Across: Shines bright in the sky', row: 3, col: 0, direction: 'across' },
+      { answer: 'RAIN', clue: '2-Down: Falls from clouds during monsoon', row: 0, col: 2, direction: 'down' },
+      { answer: 'WIND', clue: '3-Across: Moves the leaves and clouds', row: 5, col: 0, direction: 'across' },
+    ],
+  },
+  {
+    title: 'Colors',
+    size: 7,
+    words: [
+      { answer: 'RED', clue: '1-Across: Color of a ripe tomato', row: 1, col: 0, direction: 'across' },
+      { answer: 'GREEN', clue: '2-Down: Color of fresh grass', row: 0, col: 0, direction: 'down' },
+      { answer: 'BLUE', clue: '3-Across: Color of a clear sky', row: 6, col: 0, direction: 'across' },
+    ],
+  },
+  {
+    title: 'Transport',
+    size: 7,
+    words: [
+      { answer: 'CAR', clue: '1-Across: Has four wheels, used daily', row: 2, col: 0, direction: 'across' },
+      { answer: 'TRAIN', clue: '2-Down: Runs on railway tracks', row: 0, col: 1, direction: 'down' },
+      { answer: 'BUS', clue: '3-Across: Carries many passengers', row: 6, col: 0, direction: 'across' },
+    ],
+  },
+  {
+    title: 'Family',
+    size: 7,
+    words: [
+      { answer: 'MOM', clue: '1-Across: Female parent', row: 1, col: 0, direction: 'across' },
+      { answer: 'SON', clue: '2-Down: Male child', row: 0, col: 1, direction: 'down' },
+      { answer: 'DAD', clue: '3-Across: Male parent', row: 4, col: 0, direction: 'across' },
+    ],
+  },
+  {
+    title: 'Numbers',
+    size: 7,
+    words: [
+      { answer: 'ONE', clue: '1-Across: The first counting number', row: 0, col: 0, direction: 'across' },
+      { answer: 'NINE', clue: '2-Down: Comes just before ten', row: 0, col: 1, direction: 'down' },
+      { answer: 'TWO', clue: '3-Across: Comes after one', row: 5, col: 0, direction: 'across' },
+    ],
+  },
+  {
+    title: 'School',
+    size: 7,
+    words: [
+      { answer: 'PEN', clue: '1-Across: Used for writing', row: 2, col: 0, direction: 'across' },
+      { answer: 'MAP', clue: '2-Down: Shows countries and places', row: 0, col: 0, direction: 'down' },
+      { answer: 'BAG', clue: '3-Across: Carries your books', row: 4, col: 0, direction: 'across' },
+    ],
+  },
+  {
+    title: 'Nature',
+    size: 7,
+    words: [
+      { answer: 'LEAF', clue: '1-Across: Green part of a plant', row: 1, col: 0, direction: 'across' },
+      { answer: 'FERN', clue: '2-Down: A feathery green plant', row: 0, col: 1, direction: 'down' },
+      { answer: 'TREE', clue: '3-Across: Has branches and leaves', row: 5, col: 0, direction: 'across' },
+    ],
+  },
+  {
+    title: 'Time',
+    size: 7,
+    words: [
+      { answer: 'DAY', clue: '1-Across: 24 hours make one', row: 2, col: 0, direction: 'across' },
+      { answer: 'YEAR', clue: '2-Down: 12 months make one', row: 0, col: 1, direction: 'down' },
+      { answer: 'HOUR', clue: '3-Across: 60 minutes make one', row: 5, col: 0, direction: 'across' },
+    ],
+  },
+  {
+    title: 'Food',
+    size: 7,
+    words: [
+      { answer: 'TEA', clue: '1-Across: Hot drink with milk', row: 1, col: 0, direction: 'across' },
+      { answer: 'DAL', clue: '2-Down: Lentil curry', row: 0, col: 2, direction: 'down' },
+      { answer: 'RICE', clue: '3-Across: Staple grain food', row: 4, col: 0, direction: 'across' },
+    ],
+  },
+  {
+    title: 'Sports',
+    size: 7,
+    words: [
+      { answer: 'BAT', clue: '1-Across: Used to hit a ball in cricket', row: 2, col: 0, direction: 'across' },
+      { answer: 'NET', clue: '2-Down: Used in volleyball and tennis', row: 0, col: 2, direction: 'down' },
+      { answer: 'GOAL', clue: '3-Across: Scoring point in football', row: 4, col: 0, direction: 'across' },
+    ],
+  },
 ];
 
 type Cell = { letter: string; number: number | null; active: boolean };
@@ -82,7 +172,9 @@ const buildGrid = (puzzle: Puzzle): Cell[][] => {
 };
 
 const CrosswordScreen: React.FC<any> = ({ navigation }) => {
-  const [puzzleIndex, setPuzzleIndex] = useState(0);
+  const [puzzleIndex, setPuzzleIndex] = useState(() =>
+    Math.floor(Math.random() * PUZZLES.length)
+  );
   const puzzle = PUZZLES[puzzleIndex];
   const grid = useMemo(() => buildGrid(puzzle), [puzzle]);
 
@@ -134,7 +226,12 @@ const CrosswordScreen: React.FC<any> = ({ navigation }) => {
   };
 
   const handleNewPuzzle = () => {
-    const nextIndex = (puzzleIndex + 1) % PUZZLES.length;
+    let nextIndex = puzzleIndex;
+    if (PUZZLES.length > 1) {
+      while (nextIndex === puzzleIndex) {
+        nextIndex = Math.floor(Math.random() * PUZZLES.length);
+      }
+    }
     setPuzzleIndex(nextIndex);
     setAnswers(
       Array.from({ length: PUZZLES[nextIndex].size }, () =>

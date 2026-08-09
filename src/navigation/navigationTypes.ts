@@ -72,9 +72,15 @@ export type ParentTabParamList = {
 
 export type GamesStackParamList = {
   GamesHome: undefined;
-  MemoryMatch: undefined;
-  Sudoku: undefined;
-  Crossword: undefined;
+  MemoryMatch: { gameId?: number } | undefined;
+  Sudoku: { gameId?: number } | undefined;
+  Crossword: { gameId?: number } | undefined;
+  WordSearch: { gameId?: number } | undefined;
+  MathGame: { gameId?: number } | undefined;
+  ScienceQuiz: { gameId?: number } | undefined;
+  GeographyPuzzle: { gameId?: number } | undefined;
+  MatchThePair: { gameId?: number } | undefined;
+  DragDrop: { gameId?: number } | undefined;
 };
 
 export type LearningStackParamList = {

@@ -11,6 +11,12 @@ import GamesScreen from '../screens/games/GamesScreen';
 import MemoryMatchScreen from '../screens/games/MemoryMatchScreen';
 import SudokuScreen from '../screens/games/SudokuScreen';
 import CrosswordScreen from '../screens/games/CrosswordScreen';
+import WordSearchScreen from '../screens/games/WordSearchScreen';
+import MathGameScreen from '../screens/games/MathGameScreen';
+import ScienceQuizScreen from '../screens/games/ScienceQuizScreen';
+import GeographyPuzzleScreen from '../screens/games/GeographyPuzzleScreen';
+import MatchThePairScreen from '../screens/games/MatchThePairScreen';
+import DragDropScreen from '../screens/games/DragDropScreen';
 import ClassListScreen from '../screens/learning/classes/ClassListScreen';
 import SubjectListScreen from '../screens/learning/subjects/SubjectListScreen';
 import LearningContentScreen from '../screens/learning/LearningContentScreen';
@@ -69,6 +75,12 @@ const GamesStack: React.FC = () => {
       <GamesStackNav.Screen name="MemoryMatch" component={MemoryMatchScreen} />
       <GamesStackNav.Screen name="Sudoku" component={SudokuScreen} />
       <GamesStackNav.Screen name="Crossword" component={CrosswordScreen} />
+      <GamesStackNav.Screen name="WordSearch" component={WordSearchScreen} />
+      <GamesStackNav.Screen name="MathGame" component={MathGameScreen} />
+      <GamesStackNav.Screen name="ScienceQuiz" component={ScienceQuizScreen} />
+      <GamesStackNav.Screen name="GeographyPuzzle" component={GeographyPuzzleScreen} />
+      <GamesStackNav.Screen name="MatchThePair" component={MatchThePairScreen} />
+      <GamesStackNav.Screen name="DragDrop" component={DragDropScreen} />
     </GamesStackNav.Navigator>
   );
 };

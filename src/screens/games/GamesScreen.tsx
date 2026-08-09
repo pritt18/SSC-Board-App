@@ -10,7 +10,7 @@ interface Game {
   name: string;
   icon: string;
   description: string;
-  type: 'crossword' | 'memory' | 'wordsearch' | 'math' | 'science' | 'sudoku';
+  type: 'crossword' | 'memory' | 'wordsearch' | 'math' | 'science' | 'sudoku' | 'geography' | 'matchpair' | 'dragdrop';
 }
 
 const GamesScreen: React.FC = ({ navigation }: any) => {
@@ -60,6 +60,27 @@ const GamesScreen: React.FC = ({ navigation }: any) => {
       description: 'Classic number puzzle',
       type: 'sudoku'
     },
+    { 
+      id: 7, 
+      name: 'Geography Puzzle', 
+      icon: '🌍', 
+      description: 'Explore geography facts',
+      type: 'geography'
+    },
+    { 
+      id: 8, 
+      name: 'Match the Pair', 
+      icon: '🔗', 
+      description: 'Match items with their pairs',
+      type: 'matchpair'
+    },
+    { 
+      id: 9, 
+      name: 'Drag & Drop', 
+      icon: '🖐️', 
+      description: 'Sort items into the right box',
+      type: 'dragdrop'
+    },
   ]);
 
   const handleGamePress = (game: Game) => {
@@ -73,6 +94,30 @@ const GamesScreen: React.FC = ({ navigation }: any) => {
     }
     if (game.type === 'sudoku') {
       navigation.navigate('Sudoku');
+      return;
+    }
+    if (game.type === 'wordsearch') {
+      navigation.navigate('WordSearch');
+      return;
+    }
+    if (game.type === 'math') {
+      navigation.navigate('MathGame');
+      return;
+    }
+    if (game.type === 'science') {
+      navigation.navigate('ScienceQuiz');
+      return;
+    }
+    if (game.type === 'geography') {
+      navigation.navigate('GeographyPuzzle');
+      return;
+    }
+    if (game.type === 'matchpair') {
+      navigation.navigate('MatchThePair');
+      return;
+    }
+    if (game.type === 'dragdrop') {
+      navigation.navigate('DragDrop');
       return;
     }
 
