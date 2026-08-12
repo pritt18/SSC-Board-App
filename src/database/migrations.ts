@@ -93,6 +93,7 @@ export const migrations: string[] = [
     description_marathi TEXT,
     pdf_url TEXT NOT NULL,
     thumbnail_url TEXT,
+    medium TEXT DEFAULT 'both',
     total_pages INTEGER DEFAULT 0,
     sort_order INTEGER DEFAULT 1,
     is_active BOOLEAN DEFAULT 1,
@@ -211,7 +212,7 @@ export const migrations: string[] = [
     chapter_id INTEGER,
     title_english TEXT NOT NULL,
     title_marathi TEXT NOT NULL,
-    type TEXT CHECK(type IN ('crossword', 'memory_match', 'word_search', 'math_game')),
+    type TEXT CHECK(type IN ('crossword', 'memory_match', 'word_search', 'math_game', 'sudoku')),
     config TEXT,
     is_active BOOLEAN DEFAULT 1,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -236,9 +237,16 @@ export const migrations: string[] = [
   `CREATE INDEX IF NOT EXISTS idx_bookmarks_subject ON bookmarks(subject_id)`,
   `CREATE INDEX IF NOT EXISTS idx_quiz_attempts_user ON quiz_attempts(user_id)`,
   `CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_assignments_class ON assignments(class_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_assignments_teacher ON assignments(teacher_id)`,
 
   // Defensive: ensure parent_id exists even if a future change stops
   // dropping/recreating the users table above.
   `ALTER TABLE users ADD COLUMN parent_id INTEGER REFERENCES users(id)`,
   `CREATE INDEX IF NOT EXISTS idx_users_parent ON users(parent_id)`,
+
+  // Defensive: ensure medium exists on pdfs even if a future change stops
+  // dropping/recreating the pdfs table above.
+  `ALTER TABLE pdfs ADD COLUMN medium TEXT DEFAULT 'both'`,
+  `CREATE INDEX IF NOT EXISTS idx_pdfs_medium ON pdfs(medium)`,
 ];

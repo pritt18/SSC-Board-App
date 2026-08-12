@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -9,12 +10,14 @@ import {
 } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 
 import {
   NativeStackScreenProps,
 } from '@react-navigation/native-stack';
 
 import { COLORS } from '../../constants/colors';
+import { executeQuery } from '../../database/database';
 
 import {
   LearningStackParamList,
@@ -30,44 +33,62 @@ interface QuizItem {
   title: string;
   description: string;
   type: string;
-  icon: string;
   totalQuestions: number;
   timeLimit: number;
   passingPercentage: number;
 }
 
-// =========================================
-// HARDCODED QUIZ DATA
-// =========================================
-
-const quizzes: QuizItem[] = [
-  {
-    id: 1,
-    title: 'Mathematics Practice Quiz',
-    description:
-      'Practice basic mathematics questions.',
-    type: 'Practice MCQ',
-    icon: '📝',
-    totalQuestions: 5,
-    timeLimit: 5,
-    passingPercentage: 40,
-  },
-  {
-    id: 2,
-    title: 'Mathematics Mock Test',
-    description:
-      'Test your basic mathematics knowledge.',
-    type: 'Mock Test',
-    icon: '⏱️',
-    totalQuestions: 5,
-    timeLimit: 10,
-    passingPercentage: 40,
-  },
-];
+const TYPE_LABELS: Record<string, { label: string; icon: string }> = {
+  chapter_quiz: { label: 'Chapter Quiz', icon: '📘' },
+  practice_mcq: { label: 'Practice MCQ', icon: '📝' },
+  mock_test: { label: 'Mock Test', icon: '⏱️' },
+  previous_paper: { label: 'Previous Paper', icon: '📄' },
+};
 
 const QuizListScreen: React.FC<Props> = ({
   navigation,
+  route,
 }) => {
+  const { subjectId } = route.params;
+  const [loading, setLoading] = useState(true);
+  const [quizzes, setQuizzes] = useState<QuizItem[]>([]);
+
+  const loadQuizzes = async () => {
+    try {
+      setLoading(true);
+      const rows = await executeQuery(
+        `SELECT id, title_english, description_english, type,
+                total_questions, time_limit, passing_percentage
+         FROM quizzes
+         WHERE subject_id = ? AND is_active = 1
+         ORDER BY created_at DESC`,
+        [subjectId]
+      );
+
+      setQuizzes(
+        (rows as any[]).map((r) => ({
+          id: r.id,
+          title: r.title_english,
+          description: r.description_english || 'Practice questions for this subject.',
+          type: r.type,
+          totalQuestions: r.total_questions,
+          timeLimit: r.time_limit,
+          passingPercentage: r.passing_percentage,
+        }))
+      );
+    } catch (error) {
+      console.error('Error loading quizzes:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      loadQuizzes();
+    }, [subjectId])
+  );
+
   const handleQuizPress = (
     quizId: number,
   ) => {
@@ -127,100 +148,111 @@ const QuizListScreen: React.FC<Props> = ({
           Available Quizzes
         </Text>
 
-        <View style={styles.quizList}>
-          {quizzes.map(quiz => (
-            <Pressable
-              key={quiz.id}
-              onPress={() =>
-                handleQuizPress(
-                  quiz.id,
-                )
-              }
-              style={({ pressed }) => [
-                styles.quizCard,
-
-                pressed &&
-                  styles.pressedCard,
-              ]}
-            >
-              <View
-                style={
-                  styles.iconContainer
-                }
-              >
-                <Text
-                  style={styles.quizIcon}
-                >
-                  {quiz.icon}
-                </Text>
-              </View>
-
-              <View
-                style={styles.quizInfo}
-              >
-                <Text
-                  style={styles.quizType}
-                >
-                  {quiz.type}
-                </Text>
-
-                <Text
-                  style={styles.quizTitle}
-                >
-                  {quiz.title}
-                </Text>
-
-                <Text
-                  style={
-                    styles.description
+        {loading ? (
+          <ActivityIndicator color={COLORS.primary} style={{ marginTop: 30 }} />
+        ) : quizzes.length === 0 ? (
+          <Text style={styles.emptyText}>
+            No quizzes have been added for this subject yet. Check back later!
+          </Text>
+        ) : (
+          <View style={styles.quizList}>
+            {quizzes.map(quiz => {
+              const typeInfo = TYPE_LABELS[quiz.type] || { label: 'Quiz', icon: '📝' };
+              return (
+                <Pressable
+                  key={quiz.id}
+                  onPress={() =>
+                    handleQuizPress(
+                      quiz.id,
+                    )
                   }
-                  numberOfLines={2}
+                  style={({ pressed }) => [
+                    styles.quizCard,
+
+                    pressed &&
+                      styles.pressedCard,
+                  ]}
                 >
-                  {quiz.description}
-                </Text>
-
-                <View
-                  style={
-                    styles.quizDetails
-                  }
-                >
-                  <Text
+                  <View
                     style={
-                      styles.detailText
+                      styles.iconContainer
                     }
                   >
-                    {quiz.totalQuestions}{' '}
-                    Questions
-                  </Text>
+                    <Text
+                      style={styles.quizIcon}
+                    >
+                      {typeInfo.icon}
+                    </Text>
+                  </View>
 
-                  <Text
-                    style={
-                      styles.detailText
-                    }
+                  <View
+                    style={styles.quizInfo}
                   >
-                    • {quiz.timeLimit} min
-                  </Text>
+                    <Text
+                      style={styles.quizType}
+                    >
+                      {typeInfo.label}
+                    </Text>
 
-                  <Text
-                    style={
-                      styles.detailText
-                    }
-                  >
-                    • Pass{' '}
-                    {
-                      quiz.passingPercentage
-                    }
-                    %
-                  </Text>
-                </View>
-              </View>
+                    <Text
+                      style={styles.quizTitle}
+                    >
+                      {quiz.title}
+                    </Text>
 
-              <Text style={styles.arrow}>
-                ›
-              </Text>
-            </Pressable>
-          ))}
-        </View>
+                    <Text
+                      style={
+                        styles.description
+                      }
+                      numberOfLines={2}
+                    >
+                      {quiz.description}
+                    </Text>
+
+                    <View
+                      style={
+                        styles.quizDetails
+                      }
+                    >
+                      <Text
+                        style={
+                          styles.detailText
+                        }
+                      >
+                        {quiz.totalQuestions}{' '}
+                        Questions
+                      </Text>
+
+                      <Text
+                        style={
+                          styles.detailText
+                        }
+                      >
+                        • {quiz.timeLimit} min
+                      </Text>
+
+                      <Text
+                        style={
+                          styles.detailText
+                        }
+                      >
+                        • Pass{' '}
+                        {
+                          quiz.passingPercentage
+                        }
+                        %
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Text style={styles.arrow}>
+                    ›
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -288,6 +320,12 @@ const styles = StyleSheet.create({
     color:
       COLORS.textPrimary,
     marginBottom: 18,
+  },
+
+  emptyText: {
+    color: COLORS.textSecondary,
+    fontSize: 13,
+    lineHeight: 20,
   },
 
   quizList: {

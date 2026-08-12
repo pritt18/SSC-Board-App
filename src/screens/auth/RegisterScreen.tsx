@@ -22,7 +22,8 @@ const RegisterScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const [fullName, setFullName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { register } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const [medium, setMedium] = useState<'english' | 'marathi'>(language);
 
   const handleRegister = async () => {
     if (!username || !email || !password || !fullName) {
@@ -44,7 +45,7 @@ const RegisterScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
         password,
         full_name: fullName,
         role: 'student',
-        medium: 'english',
+        medium,
       });
       
       if (success) {
@@ -108,6 +109,26 @@ const RegisterScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
             secureTextEntry
           />
 
+          <Text style={styles.mediumLabel}>Select Medium</Text>
+          <View style={styles.mediumRow}>
+            <TouchableOpacity
+              style={[styles.mediumChip, medium === 'english' && styles.mediumChipSelected]}
+              onPress={() => setMedium('english')}
+            >
+              <Text style={[styles.mediumChipText, medium === 'english' && styles.mediumChipTextSelected]}>
+                English Medium
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.mediumChip, medium === 'marathi' && styles.mediumChipSelected]}
+              onPress={() => setMedium('marathi')}
+            >
+              <Text style={[styles.mediumChipText, medium === 'marathi' && styles.mediumChipTextSelected]}>
+                Marathi Medium
+              </Text>
+            </TouchableOpacity>
+          </View>
+
           <TouchableOpacity 
             style={styles.button} 
             onPress={handleRegister} 
@@ -130,6 +151,39 @@ const RegisterScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
+  mediumLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
+    marginTop: 4,
+  },
+  mediumRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 16,
+  },
+  mediumChip: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#fff',
+    alignItems: 'center',
+  },
+  mediumChipSelected: {
+    borderColor: '#007AFF',
+    backgroundColor: '#EFF6FF',
+  },
+  mediumChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  mediumChipTextSelected: {
+    color: '#007AFF',
+  },
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',

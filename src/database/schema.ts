@@ -95,6 +95,7 @@ export const schema: string[] = [
     description_marathi TEXT,
     pdf_url TEXT NOT NULL,
     thumbnail_url TEXT,
+    medium TEXT DEFAULT 'both',
     total_pages INTEGER DEFAULT 0,
     sort_order INTEGER DEFAULT 1,
     is_active BOOLEAN DEFAULT 1,
@@ -210,7 +211,7 @@ export const schema: string[] = [
     chapter_id INTEGER,
     title_english TEXT NOT NULL,
     title_marathi TEXT NOT NULL,
-    type TEXT CHECK(type IN ('crossword', 'memory_match', 'word_search', 'math_game')),
+    type TEXT CHECK(type IN ('crossword', 'memory_match', 'word_search', 'math_game', 'sudoku')),
     config TEXT,
     is_active BOOLEAN DEFAULT 1,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -248,5 +249,21 @@ export const schema: string[] = [
     is_read BOOLEAN DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  )`,
+
+  // Assignments Table (Teacher module)
+  `CREATE TABLE IF NOT EXISTS assignments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    class_id INTEGER NOT NULL,
+    subject_id INTEGER,
+    teacher_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    due_date DATE,
+    is_active BOOLEAN DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (class_id) REFERENCES classes(id),
+    FOREIGN KEY (subject_id) REFERENCES subjects(id),
+    FOREIGN KEY (teacher_id) REFERENCES users(id)
   )`
 ];

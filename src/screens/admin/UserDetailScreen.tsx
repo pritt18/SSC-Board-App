@@ -309,11 +309,39 @@ const UserDetailScreen: React.FC<Props> = ({ navigation, route }) => {
             <Text style={styles.detailValue}>{user.permissions || 'user'}</Text>
           </View>
 
-          <View style={styles.detailItem}>
+          <TouchableOpacity
+            style={styles.detailItem}
+            onPress={() => {
+              const newMedium = user.medium === 'marathi' ? 'english' : 'marathi';
+              Alert.alert(
+                'Change Medium',
+                `Set ${user.full_name}'s medium to ${newMedium === 'marathi' ? 'Marathi' : 'English'}?`,
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Change',
+                    onPress: async () => {
+                      try {
+                        await executeQuery(
+                          `UPDATE users SET medium = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+                          [newMedium, user.id]
+                        );
+                        loadUserData();
+                      } catch (error) {
+                        Alert.alert('Error', 'Failed to update medium');
+                      }
+                    },
+                  },
+                ]
+              );
+            }}
+          >
             <Ionicons name="language-outline" size={20} color="#64748B" />
             <Text style={styles.detailLabel}>Medium</Text>
-            <Text style={styles.detailValue}>{user.medium || 'Not set'}</Text>
-          </View>
+            <Text style={[styles.detailValue, { color: '#2563EB', fontWeight: '700' }]}>
+              {user.medium || 'Not set'}
+            </Text>
+          </TouchableOpacity>
 
           <View style={styles.detailItem}>
             <Ionicons name="school-outline" size={20} color="#64748B" />
@@ -351,16 +379,16 @@ const UserDetailScreen: React.FC<Props> = ({ navigation, route }) => {
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => {
-              if (user.role === 'student') {
+              if (user.role === 'student' || user.role === 'teacher') {
                 navigation.navigate('AssignClass', { studentId: user.id });
               } else {
-                Alert.alert('Info', 'Class assignment is only available for students');
+                Alert.alert('Info', 'Class assignment is only available for students and teachers');
               }
             }}
           >
             <Ionicons name="school-outline" size={20} color="#2563EB" />
             <Text style={[styles.actionButtonText, { color: '#2563EB' }]}>
-              {user.role === 'student' ? 'Assign Class' : 'Change Role'}
+              {user.role === 'student' || user.role === 'teacher' ? 'Assign Class' : 'Change Role'}
             </Text>
           </TouchableOpacity>
 

@@ -5,6 +5,8 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 
 import DashboardScreen from '../screens/student/dashboard/DashboardScreen';
+import StudentAssignmentsScreen from '../screens/student/StudentAssignmentsScreen';
+import StudentNotificationsScreen from '../screens/student/StudentNotificationsScreen';
 import ProfileScreen from '../screens/student/profile/ProfileScreen';
 import ProgressScreen from '../screens/progress/ProgressScreen';
 import GamesScreen from '../screens/games/GamesScreen';
@@ -34,11 +36,13 @@ import {
   StudentTabParamList,
   LearningStackParamList,
   GamesStackParamList,
+  DashboardStackParamList,
 } from './navigationTypes';
 
 const Tab = createBottomTabNavigator<StudentTabParamList>();
 const Stack = createNativeStackNavigator<LearningStackParamList>();
 const GamesStackNav = createNativeStackNavigator<GamesStackParamList>();
+const DashboardStackNav = createNativeStackNavigator<DashboardStackParamList>();
 
 const LearningStack: React.FC = () => {
   return (
@@ -82,6 +86,21 @@ const GamesStack: React.FC = () => {
       <GamesStackNav.Screen name="MatchThePair" component={MatchThePairScreen} />
       <GamesStackNav.Screen name="DragDrop" component={DragDropScreen} />
     </GamesStackNav.Navigator>
+  );
+};
+
+const DashboardStack: React.FC = () => {
+  return (
+    <DashboardStackNav.Navigator
+      initialRouteName="Dashboard"
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <DashboardStackNav.Screen name="Dashboard" component={DashboardScreen} />
+      <DashboardStackNav.Screen name="StudentAssignments" component={StudentAssignmentsScreen} />
+      <DashboardStackNav.Screen name="StudentNotifications" component={StudentNotificationsScreen} />
+    </DashboardStackNav.Navigator>
   );
 };
 
@@ -131,7 +150,7 @@ const StudentNavigator: React.FC = () => {
     >
       <Tab.Screen 
         name="Dashboard" 
-        component={DashboardScreen} 
+        component={DashboardStack} 
         options={{
           title: 'Home',
         }}

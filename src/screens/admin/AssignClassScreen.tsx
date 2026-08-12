@@ -224,7 +224,7 @@ const AssignClassScreen: React.FC<Props> = ({
             </Text>
 
             <Text style={styles.subtitle}>
-              Select class access for student
+              Select class access for this user
             </Text>
           </View>
         </View>

@@ -70,6 +70,30 @@ export type ParentTabParamList = {
   ParentNotifications: undefined;
 };
 
+export type TeacherTabParamList = {
+  TeacherDashboard: undefined;
+  TeacherQuizzesStack: undefined;
+  TeacherAssignmentsStack: undefined;
+  TeacherReports: undefined;
+  TeacherNotifications: undefined;
+};
+
+export type TeacherQuizzesStackParamList = {
+  TeacherQuizzes: undefined;
+  TeacherCreateQuiz: undefined;
+};
+
+export type TeacherAssignmentsStackParamList = {
+  TeacherAssignments: undefined;
+  TeacherCreateAssignment: undefined;
+};
+
+export type DashboardStackParamList = {
+  Dashboard: undefined;
+  StudentAssignments: undefined;
+  StudentNotifications: undefined;
+};
+
 export type GamesStackParamList = {
   GamesHome: undefined;
   MemoryMatch: { gameId?: number } | undefined;

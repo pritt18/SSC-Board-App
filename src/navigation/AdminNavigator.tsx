@@ -9,6 +9,7 @@ import ManageVideosScreen from '../screens/admin/ManageVideosScreen';
 import AddVideoScreen from '../screens/admin/AddVideoScreen';
 import EditVideoScreen from '../screens/admin/EditVideoScreen';
 import ManagePdfsScreen from '../screens/admin/ManagePdfsScreen';
+import BulkImportPdfsScreen from '../screens/admin/BulkImportPdfsScreen';
 import AddPdfScreen from '../screens/admin/AddPdfScreen';
 import EditPdfScreen from '../screens/admin/EditPdfScreen';
 import ManageQuizzesScreen from '../screens/admin/ManageQuizzesScreen';
@@ -32,6 +33,7 @@ export type AdminStackParamList = {
   AddVideo: undefined;
   EditVideo: { videoId: number };
   ManagePdfs: undefined;
+  BulkImportPdfs: undefined;
   AddPdf: undefined;
   EditPdf: { pdfId: number };
   ManageQuizzes: undefined;
@@ -64,6 +66,7 @@ const AdminNavigator: React.FC = () => {
       <Stack.Screen name="AddVideo" component={AddVideoScreen} />
       <Stack.Screen name="EditVideo" component={EditVideoScreen} />
       <Stack.Screen name="ManagePdfs" component={ManagePdfsScreen} />
+      <Stack.Screen name="BulkImportPdfs" component={BulkImportPdfsScreen} />
       <Stack.Screen name="AddPdf" component={AddPdfScreen} />
       <Stack.Screen name="EditPdf" component={EditPdfScreen} />
       <Stack.Screen name="ManageQuizzes" component={ManageQuizzesScreen} />

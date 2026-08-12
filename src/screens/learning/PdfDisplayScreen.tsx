@@ -1,72 +1,64 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, Text, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { WebView } from 'react-native-webview';
-import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
 
 import { COLORS } from '../../constants/colors';
 import { LearningStackParamList } from '../../navigation/navigationTypes';
 
 type Props = NativeStackScreenProps<LearningStackParamList, 'PdfDisplay'>;
 
+// -----------------------------------------------------------------
+// NOTE: Android's WebView has no built-in PDF plugin, so rendering a
+// PDF inline via <embed>/<iframe> inside a WebView shows a BLANK
+// white screen on most Android devices (a well-known limitation).
+// The reliable, Expo-Go-compatible fix is to hand the local file off
+// to the device's own PDF viewer using expo-sharing — Android shows
+// an "Open with" chooser, iOS shows a native Quick Look preview.
+// -----------------------------------------------------------------
+
 const PdfDisplayScreen: React.FC<Props> = ({ route, navigation }) => {
-  const { pdfId, pdfUrl, title } = route.params;
-  const [isLoading, setIsLoading] = useState(true);
+  const { pdfUrl, title } = route.params;
+  const [opening, setOpening] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Convert local PDF to base64 for WebView
-  const [pdfData, setPdfData] = useState<string | null>(null);
+  const openPdf = async () => {
+    if (!pdfUrl) {
+      setError('No PDF file was found for this item.');
+      setOpening(false);
+      return;
+    }
+    try {
+      setOpening(true);
+      setError(null);
 
-  React.useEffect(() => {
-    const loadPdf = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        // If it's a local file (starts with file://)
-        if (pdfUrl && pdfUrl.startsWith('file://')) {
-          const base64 = await FileSystem.readAsStringAsync(pdfUrl, {
-            encoding: FileSystem.EncodingType.Base64,
-          });
-          setPdfData(base64);
-        } else if (pdfUrl) {
-          // For web URLs, use the URL directly
-          setPdfData(null);
-        }
-      } catch (err) {
-        setError('Failed to load PDF');
-        console.error('PDF load error:', err);
-      } finally {
-        setIsLoading(false);
+      const available = await Sharing.isAvailableAsync();
+      if (!available) {
+        setError('Opening PDFs is not supported on this device.');
+        return;
       }
-    };
 
-    loadPdf();
-  }, [pdfUrl]);
-
-  // Generate HTML for PDF viewing
-  const getPdfHtml = (base64Data: string) => {
-    return `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-          <style>
-            body { margin: 0; padding: 0; background: #f5f5f5; }
-            embed { width: 100%; height: 100vh; }
-          </style>
-        </head>
-        <body>
-          <embed src="data:application/pdf;base64,${base64Data}" type="application/pdf" />
-        </body>
-      </html>
-    `;
+      await Sharing.shareAsync(pdfUrl, {
+        mimeType: 'application/pdf',
+        dialogTitle: title || 'PDF Document',
+        UTI: 'com.adobe.pdf',
+      });
+    } catch (err) {
+      console.error('Error opening PDF:', err);
+      setError('Failed to open the PDF. Please try again.');
+    } finally {
+      setOpening(false);
+    }
   };
+
+  useEffect(() => {
+    openPdf();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pdfUrl]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header */}
       <View style={styles.header}>
         <Pressable style={styles.backButton} onPress={() => navigation.goBack()}>
           <Text style={styles.backText}>‹</Text>
@@ -74,48 +66,41 @@ const PdfDisplayScreen: React.FC<Props> = ({ route, navigation }) => {
         <Text style={styles.title} numberOfLines={1}>{title || 'PDF Document'}</Text>
       </View>
 
-      {/* Content */}
-      {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loadingText}>Loading PDF...</Text>
-        </View>
-      ) : error ? (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorIcon}>📄</Text>
-          <Text style={styles.errorTitle}>Unable to Load PDF</Text>
-          <Text style={styles.errorText}>{error}</Text>
-          <Pressable style={styles.retryButton} onPress={() => navigation.goBack()}>
-            <Text style={styles.retryButtonText}>Go Back</Text>
-          </Pressable>
-        </View>
-      ) : pdfData ? (
-        // Local PDF with base64
-        <WebView
-          source={{ html: getPdfHtml(pdfData) }}
-          style={styles.webview}
-          onLoadStart={() => setIsLoading(true)}
-          onLoadEnd={() => setIsLoading(false)}
-          startInLoadingState={true}
-        />
-      ) : pdfUrl ? (
-        // Online PDF or local URL
-        <WebView
-          source={{ uri: pdfUrl }}
-          style={styles.webview}
-          onLoadStart={() => setIsLoading(true)}
-          onLoadEnd={() => setIsLoading(false)}
-          startInLoadingState={true}
-        />
-      ) : (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorIcon}>📄</Text>
-          <Text style={styles.errorTitle}>No PDF Found</Text>
-          <Pressable style={styles.retryButton} onPress={() => navigation.goBack()}>
-            <Text style={styles.retryButtonText}>Go Back</Text>
-          </Pressable>
-        </View>
-      )}
+      <View style={styles.content}>
+        {opening ? (
+          <>
+            <ActivityIndicator size="large" color={COLORS.primary} />
+            <Text style={styles.statusText}>Opening PDF viewer...</Text>
+          </>
+        ) : error ? (
+          <>
+            <Text style={styles.errorIcon}>📄</Text>
+            <Text style={styles.errorTitle}>Unable to Open PDF</Text>
+            <Text style={styles.errorText}>{error}</Text>
+            <Pressable style={styles.retryButton} onPress={openPdf}>
+              <Text style={styles.retryButtonText}>Try Again</Text>
+            </Pressable>
+            <Pressable style={styles.backLink} onPress={() => navigation.goBack()}>
+              <Text style={styles.backLinkText}>Go Back</Text>
+            </Pressable>
+          </>
+        ) : (
+          <>
+            <Text style={styles.errorIcon}>📄</Text>
+            <Text style={styles.errorTitle}>PDF Opened</Text>
+            <Text style={styles.errorText}>
+              If a viewer app opened, you can read the PDF there. You can also
+              tap below to open it again.
+            </Text>
+            <Pressable style={styles.retryButton} onPress={openPdf}>
+              <Text style={styles.retryButtonText}>Open Again</Text>
+            </Pressable>
+            <Pressable style={styles.backLink} onPress={() => navigation.goBack()}>
+              <Text style={styles.backLinkText}>Go Back</Text>
+            </Pressable>
+          </>
+        )}
+      </View>
     </SafeAreaView>
   );
 };
@@ -123,10 +108,7 @@ const PdfDisplayScreen: React.FC<Props> = ({ route, navigation }) => {
 export default PdfDisplayScreen;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.white,
-  },
+  container: { flex: 1, backgroundColor: COLORS.white },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -135,68 +117,22 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.border,
     backgroundColor: COLORS.white,
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  backText: {
-    fontSize: 32,
-    color: COLORS.textPrimary,
-    marginTop: -4,
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-    flex: 1,
-  },
-  webview: {
-    flex: 1,
-  },
-  loadingContainer: {
+  backButton: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center', marginRight: 10 },
+  backText: { fontSize: 32, color: COLORS.textPrimary, marginTop: -4 },
+  title: { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary, flex: 1 },
+  content: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 30,
     backgroundColor: COLORS.background,
   },
-  loadingText: {
-    marginTop: 12,
-    color: COLORS.textSecondary,
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-    backgroundColor: COLORS.background,
-  },
-  errorIcon: {
-    fontSize: 50,
-    marginBottom: 20,
-  },
-  errorTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-    marginBottom: 10,
-  },
-  errorText: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  retryButton: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 30,
-    paddingVertical: 12,
-    borderRadius: 10,
-  },
-  retryButtonText: {
-    color: COLORS.white,
-    fontWeight: '600',
-  },
+  statusText: { marginTop: 14, color: COLORS.textSecondary, fontSize: 14 },
+  errorIcon: { fontSize: 50, marginBottom: 16 },
+  errorTitle: { fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 8 },
+  errorText: { fontSize: 13, color: COLORS.textSecondary, textAlign: 'center', marginBottom: 20, lineHeight: 19 },
+  retryButton: { backgroundColor: COLORS.primary, paddingHorizontal: 30, paddingVertical: 12, borderRadius: 10 },
+  retryButtonText: { color: COLORS.white, fontWeight: '600' },
+  backLink: { marginTop: 14, padding: 8 },
+  backLinkText: { color: COLORS.textSecondary, fontWeight: '600', fontSize: 13 },
 });

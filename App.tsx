@@ -33,6 +33,7 @@ const CORNER_LOGO_HIDDEN_ROUTES = [
   'AddVideo',
   'EditVideo',
   'ManagePdfs',
+  'BulkImportPdfs',
   'AddPdf',
   'EditPdf',
   'ManageQuizzes',
@@ -46,6 +47,8 @@ const CORNER_LOGO_HIDDEN_ROUTES = [
   'ManageSubjects',
   'AddSubject',
   'EditSubject',
+  'ManageGames',
+  'GameForm',
   // Parent tabs already show a welcome header with the account name —
   // the corner watermark was clashing there too.
   'ParentDashboard',
@@ -53,6 +56,12 @@ const CORNER_LOGO_HIDDEN_ROUTES = [
   'ParentQuizResults',
   'ParentStudyTime',
   'ParentNotifications',
+  // Teacher screens with their own header-right button ('+ Create' / 'Logout')
+  'TeacherDashboard',
+  'TeacherQuizzes',
+  'TeacherAssignments',
+  'TeacherQuizzesStack',
+  'TeacherAssignmentsStack',
 ];
 
 const navigationRef = createNavigationContainerRef<any>();

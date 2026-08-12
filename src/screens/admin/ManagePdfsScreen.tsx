@@ -211,6 +211,12 @@ const ManagePdfsScreen: React.FC<Props> = ({ navigation }) => {
         <Text style={styles.headerTitle}>Manage PDFs</Text>
         <TouchableOpacity 
           style={styles.addButton} 
+          onPress={() => navigation.navigate('BulkImportPdfs')}
+        >
+          <Ionicons name="cloud-upload-outline" size={20} color={COLORS.white} />
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.addButton} 
           onPress={() => navigation.navigate('AddPdf')}
         >
           <Ionicons name="add" size={24} color={COLORS.white} />

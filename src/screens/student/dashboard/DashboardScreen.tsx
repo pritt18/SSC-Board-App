@@ -235,6 +235,22 @@ const DashboardScreen: React.FC = ({ navigation }: any) => {
               <Text style={styles.actionIcon}>👤</Text>
               <Text style={styles.actionText}>Profile</Text>
             </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.actionCard}
+              onPress={() => navigation.navigate('StudentAssignments')}
+            >
+              <Text style={styles.actionIcon}>📋</Text>
+              <Text style={styles.actionText}>Assignments</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.actionCard}
+              onPress={() => navigation.navigate('StudentNotifications')}
+            >
+              <Text style={styles.actionIcon}>🔔</Text>
+              <Text style={styles.actionText}>Notifications</Text>
+            </TouchableOpacity>
           </View>
         </View>
 

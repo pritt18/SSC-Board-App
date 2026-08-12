@@ -14,6 +14,7 @@ import { useFocusEffect } from '@react-navigation/native';
 
 import { COLORS } from '../../constants/colors';
 import { executeQuery } from '../../database/database';
+import { useAuth } from '../../context/AuthContext';
 import { LearningStackParamList } from '../../navigation/navigationTypes';
 
 type Props = NativeStackScreenProps<LearningStackParamList, 'PdfViewer'>;
@@ -29,21 +30,25 @@ interface PdfItem {
 
 const PdfViewerScreen: React.FC<Props> = ({ navigation, route }) => {
   const { subjectId } = route.params;
+  const { user } = useAuth();
   const [pdfs, setPdfs] = useState<PdfItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // -----------------------------------------
   // LOAD PDFs FROM LOCAL DATABASE
+  // (filtered by the student's medium — 'both' PDFs always show)
   // -----------------------------------------
   const loadPdfs = async () => {
     try {
       setIsLoading(true);
+      const studentMedium = user?.medium || 'english';
       const pdfData = await executeQuery(
         `SELECT id, subject_id, title_english, description_english, pdf_url, sort_order 
          FROM pdfs 
          WHERE subject_id = ? AND is_active = 1 
+           AND (medium = ? OR medium = 'both' OR medium IS NULL)
          ORDER BY sort_order ASC, id ASC`,
-        [subjectId]
+        [subjectId, studentMedium]
       );
       
       setPdfs(pdfData as PdfItem[]);
