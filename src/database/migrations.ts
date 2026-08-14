@@ -1,26 +1,16 @@
 // src/database/migrations.ts
 export const migrations: string[] = [
   // ============================================
-  // FORCE DROP TABLES WITH WRONG SCHEMA
+  // NOTE: This file previously force-DROPped and recreated the users,
+  // pdfs, videos, quizzes, chapters, games, questions, video_progress,
+  // quiz_attempts, bookmarks, and progress tables on EVERY app launch.
+  // That wiped all admin-created content and all student progress every
+  // time the app was fully restarted. It has been removed — the
+  // CREATE TABLE IF NOT EXISTS statements below are safe no-ops for
+  // tables that already exist. Any new columns are added via the
+  // defensive ALTER TABLE statements near the end of this file.
   // ============================================
-  
-  // Drop tables that need schema changes (in correct order due to foreign keys)
-  `DROP TABLE IF EXISTS questions`,
-  `DROP TABLE IF EXISTS video_progress`,
-  `DROP TABLE IF EXISTS quiz_attempts`,
-  `DROP TABLE IF EXISTS bookmarks`,
-  `DROP TABLE IF EXISTS progress`,
-  
-  // Drop content tables
-  `DROP TABLE IF EXISTS videos`,
-  `DROP TABLE IF EXISTS pdfs`,
-  `DROP TABLE IF EXISTS quizzes`,
-  `DROP TABLE IF EXISTS chapters`,
-  `DROP TABLE IF EXISTS games`,
-  
-  // Drop users (if needed)
-  `DROP TABLE IF EXISTS users`,
-  
+
   // ============================================
   // RECREATE TABLES WITH CORRECT SCHEMA
   // ============================================

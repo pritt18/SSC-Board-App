@@ -28,8 +28,9 @@ interface PdfItem {
   title_marathi: string;
   subject: string;
   subject_id: number;
-  classNumber: number;
-  className: string;
+  class_number: number;
+  class_name: string;
+  medium: string;
   isActive: boolean;
   created_at: string;
   pdf_url: string;
@@ -46,6 +47,7 @@ const ManagePdfsScreen: React.FC<Props> = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [selectedClass, setSelectedClass] = useState<string>('all');
+  const [selectedMedium, setSelectedMedium] = useState<string>('all');
   const [classes, setClasses] = useState<{ id: number; name: string }[]>([]);
 
   const loadPdfs = async () => {
@@ -59,8 +61,9 @@ const ManagePdfsScreen: React.FC<Props> = ({ navigation }) => {
           p.title_marathi,
           s.name_english as subject,
           p.subject_id,
-          c.class_number as classNumber,
-          c.name_english as className,
+          c.class_number,
+          c.name_english as class_name,
+          p.medium,
           p.is_active as isActive,
           p.created_at,
           p.pdf_url,
@@ -74,10 +77,20 @@ const ManagePdfsScreen: React.FC<Props> = ({ navigation }) => {
       `;
       
       const params: any[] = [];
-      
+      const conditions: string[] = [];
+
       if (selectedClass !== 'all') {
-        query += ' WHERE c.id = ?';
+        conditions.push('c.id = ?');
         params.push(parseInt(selectedClass));
+      }
+
+      if (selectedMedium !== 'all') {
+        conditions.push("(p.medium = ? OR p.medium = 'both' OR p.medium IS NULL)");
+        params.push(selectedMedium);
+      }
+
+      if (conditions.length > 0) {
+        query += ' WHERE ' + conditions.join(' AND ');
       }
       
       query += ' ORDER BY p.id DESC';
@@ -110,7 +123,7 @@ const ManagePdfsScreen: React.FC<Props> = ({ navigation }) => {
     useCallback(() => {
       loadPdfs();
       loadClasses();
-    }, [selectedClass])
+    }, [selectedClass, selectedMedium])
   );
 
   const onRefresh = () => {
@@ -244,7 +257,7 @@ const ManagePdfsScreen: React.FC<Props> = ({ navigation }) => {
           onPress={() => setShowFilterModal(true)}
         >
           <Ionicons name="filter" size={20} color={COLORS.primary} />
-          {selectedClass !== 'all' && (
+          {(selectedClass !== 'all' || selectedMedium !== 'all') && (
             <View style={styles.filterBadge} />
           )}
         </TouchableOpacity>
@@ -281,7 +294,29 @@ const ManagePdfsScreen: React.FC<Props> = ({ navigation }) => {
                     {pdf.isActive ? 'Active' : 'Inactive'}
                   </Text>
                 </View>
-                <Text style={styles.classText}>{pdf.className}</Text>
+                <View style={styles.headerRightBadges}>
+                  <Text style={styles.classText}>
+                    Class {pdf.class_number != null ? pdf.class_number : (pdf.class_name || '?')}
+                  </Text>
+                  <View
+                    style={[
+                      styles.mediumBadge,
+                      pdf.medium === 'marathi'
+                        ? styles.mediumBadgeMarathi
+                        : pdf.medium === 'english'
+                        ? styles.mediumBadgeEnglish
+                        : styles.mediumBadgeBoth,
+                    ]}
+                  >
+                    <Text style={styles.mediumBadgeText}>
+                      {pdf.medium === 'marathi'
+                        ? 'Marathi'
+                        : pdf.medium === 'english'
+                        ? 'English'
+                        : 'Both'}
+                    </Text>
+                  </View>
+                </View>
               </View>
 
               <View style={styles.cardBody}>
@@ -356,7 +391,6 @@ const ManagePdfsScreen: React.FC<Props> = ({ navigation }) => {
               style={[styles.filterOption, selectedClass === 'all' && styles.filterOptionSelected]}
               onPress={() => {
                 setSelectedClass('all');
-                setShowFilterModal(false);
               }}
             >
               <Text style={[styles.filterOptionText, selectedClass === 'all' && styles.filterOptionTextSelected]}>
@@ -369,7 +403,6 @@ const ManagePdfsScreen: React.FC<Props> = ({ navigation }) => {
                 style={[styles.filterOption, selectedClass === String(cls.id) && styles.filterOptionSelected]}
                 onPress={() => {
                   setSelectedClass(String(cls.id));
-                  setShowFilterModal(false);
                 }}
               >
                 <Text style={[styles.filterOptionText, selectedClass === String(cls.id) && styles.filterOptionTextSelected]}>
@@ -377,6 +410,32 @@ const ManagePdfsScreen: React.FC<Props> = ({ navigation }) => {
                 </Text>
               </TouchableOpacity>
             ))}
+
+            <Text style={[styles.filterModalTitle, { marginTop: 16 }]}>Filter by Medium</Text>
+            {[
+              { key: 'all', label: 'All Mediums' },
+              { key: 'english', label: 'English Medium' },
+              { key: 'marathi', label: 'Marathi Medium' },
+            ].map((m) => (
+              <TouchableOpacity
+                key={m.key}
+                style={[styles.filterOption, selectedMedium === m.key && styles.filterOptionSelected]}
+                onPress={() => {
+                  setSelectedMedium(m.key);
+                }}
+              >
+                <Text style={[styles.filterOptionText, selectedMedium === m.key && styles.filterOptionTextSelected]}>
+                  {m.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+
+            <TouchableOpacity
+              style={styles.filterApplyButton}
+              onPress={() => setShowFilterModal(false)}
+            >
+              <Text style={styles.filterApplyButtonText}>Apply</Text>
+            </TouchableOpacity>
           </View>
         </TouchableOpacity>
       </Modal>
@@ -540,6 +599,30 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#64748B',
   },
+  headerRightBadges: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  mediumBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  mediumBadgeEnglish: {
+    backgroundColor: '#DBEAFE',
+  },
+  mediumBadgeMarathi: {
+    backgroundColor: '#FEF3C7',
+  },
+  mediumBadgeBoth: {
+    backgroundColor: '#E2E8F0',
+  },
+  mediumBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#334155',
+  },
   cardBody: {
     flexDirection: 'row',
     padding: 14,
@@ -661,6 +744,18 @@ const styles = StyleSheet.create({
   filterOptionTextSelected: {
     color: COLORS.primary,
     fontWeight: '600',
+  },
+  filterApplyButton: {
+    marginTop: 16,
+    backgroundColor: COLORS.primary,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  filterApplyButtonText: {
+    color: COLORS.white,
+    fontWeight: '700',
+    fontSize: 14,
   },
 });
 

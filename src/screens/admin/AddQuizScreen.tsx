@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -230,6 +232,11 @@ const handleAddQuiz = async () => {
         <Text style={styles.title}>Add Quiz</Text>
       </View>
 
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      >
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         <View style={styles.formCard}>
           <Input
@@ -258,7 +265,7 @@ const handleAddQuiz = async () => {
           {/* Subject Selection */}
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>Subject *</Text>
-            <View style={styles.pickerContainer}>
+            <ScrollView style={styles.pickerContainer} nestedScrollEnabled>
               {subjects.map((subject) => (
                 <TouchableOpacity
                   key={subject.id}
@@ -273,7 +280,7 @@ const handleAddQuiz = async () => {
                   </Text>
                 </TouchableOpacity>
               ))}
-            </View>
+            </ScrollView>
           </View>
 
           <View style={styles.row}>
@@ -384,6 +391,7 @@ const handleAddQuiz = async () => {
           />
         </View>
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -437,13 +445,14 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   pickerContainer: {
-    gap: 8,
     maxHeight: 150,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 8,
   },
   subjectOption: {
     padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
+    borderBottomWidth: 1,
     borderColor: COLORS.border,
     backgroundColor: COLORS.white,
   },
