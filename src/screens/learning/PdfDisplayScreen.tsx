@@ -3,6 +3,7 @@ import { View, StyleSheet, Text, Pressable, ActivityIndicator } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { WebView } from 'react-native-webview';
+import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as ScreenCapture from 'expo-screen-capture';
 
@@ -12,27 +13,47 @@ import { LearningStackParamList } from '../../navigation/navigationTypes';
 type Props = NativeStackScreenProps<LearningStackParamList, 'PdfDisplay'>;
 
 // -----------------------------------------------------------------
-// Renders the PDF entirely inside the app using PDF.js (loaded from
-// a CDN, since Expo Go can't bundle the pdf.js worker as a local
-// asset without a custom dev client). The PDF's own bytes never
-// leave the device — only the pdf.js *library* needs a network
-// fetch, so this needs internet the first time it's opened.
+// Fully OFFLINE, memory-efficient in-app PDF viewer.
+//
+// IMPORTANT: unlike a naive approach, this does NOT read the whole
+// PDF into memory as a base64 string and pass it through the React
+// Native bridge. That works for small files but can crash on large
+// PDFs (base64 inflates size ~33%, then it gets duplicated across
+// JS memory + the RN bridge + the WebView's own memory).
+//
+// Instead:
+//  1. The pdf.js viewer HTML (with the library bundled inline, no
+//     network) is written to disk ONCE and reused for every PDF.
+//  2. The WebView loads that HTML *from disk* via a file:// URI
+//     (source={{uri}}), not via source={{html}} — so the ~1.4MB
+//     pdf.js payload never goes through the bridge either.
+//  3. The target PDF's own file:// path is handed to pdf.js, which
+//     reads/renders it directly, page by page, from disk.
+//
+// This keeps peak memory roughly proportional to "one page at a
+// time" rather than "the entire file", so it scales far better to
+// large PDFs and to opening many PDFs across a session.
 //
 // There is deliberately NO share/download button anywhere on this
 // screen, and long-press / text-selection / right-click are
-// disabled in the page itself, so there's no built-in way to export
-// the file from here. Screenshots are additionally blocked while
-// this screen is open (Android only — iOS has no public API to
-// block screenshots, only to detect them).
+// disabled in the page itself. Screenshots are additionally blocked
+// while this screen is open (Android only — iOS has no public API
+// to block screenshots, only to detect them).
 // -----------------------------------------------------------------
 
-const buildViewerHtml = (base64: string) => `
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const PDFJS_LIB_ASSET = require('../../../assets/pdfjs/pdf.min.js.txt');
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const PDFJS_WORKER_ASSET = require('../../../assets/pdfjs/pdf.worker.min.js.txt');
+
+const VIEWER_HTML_PATH = FileSystem.documentDirectory + 'pdf_viewer.html';
+
+const buildViewerHtml = (pdfJsSource: string, pdfWorkerSource: string) => `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <style>
     * {
       -webkit-touch-callout: none;
@@ -67,21 +88,25 @@ const buildViewerHtml = (base64: string) => `
 </head>
 <body oncontextmenu="return false">
   <div id="pages"><div id="status">Loading PDF...</div></div>
+
   <script>
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  ${pdfJsSource}
+  </script>
 
-    function base64ToUint8Array(base64) {
-      const raw = atob(base64);
-      const arr = new Uint8Array(raw.length);
-      for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
-      return arr;
-    }
+  <script>
+    (function () {
+      var workerSource = ${JSON.stringify(pdfWorkerSource)};
+      var blob = new Blob([workerSource], { type: 'application/javascript' });
+      pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(blob);
+    })();
 
-    async function renderPdf() {
+    // Renders pages one at a time and discards each page object right
+    // after drawing it, instead of holding the whole document's pages
+    // in memory at once.
+    async function renderPdf(pdfFileUri) {
       const container = document.getElementById('pages');
       try {
-        const data = base64ToUint8Array("${base64}");
-        const pdf = await pdfjsLib.getDocument({ data }).promise;
+        const pdf = await pdfjsLib.getDocument({ url: pdfFileUri }).promise;
         container.innerHTML = '';
 
         for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
@@ -93,12 +118,18 @@ const buildViewerHtml = (base64: string) => `
           container.appendChild(canvas);
           const ctx = canvas.getContext('2d');
           await page.render({ canvasContext: ctx, viewport }).promise;
+          page.cleanup();
         }
       } catch (err) {
-        container.innerHTML = '<div id="status">Could not display this PDF.</div>';
+        container.innerHTML = '<div id="status">Could not display this PDF.<br/>' + (err && err.message ? err.message : '') + '</div>';
       }
     }
-    renderPdf();
+
+    // The actual PDF path is injected right before this script runs
+    // (see injectedJavaScriptBeforeContentLoaded on the RN side).
+    if (window.__PDF_FILE_URI__) {
+      renderPdf(window.__PDF_FILE_URI__);
+    }
   </script>
 </body>
 </html>
@@ -106,12 +137,11 @@ const buildViewerHtml = (base64: string) => `
 
 const PdfDisplayScreen: React.FC<Props> = ({ route, navigation }) => {
   const { pdfUrl, title } = route.params;
-  const [html, setHtml] = useState<string | null>(null);
+  const [viewerReady, setViewerReady] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Block screenshots/screen recording while a PDF is open (Android).
     ScreenCapture.preventScreenCaptureAsync().catch(() => {});
     return () => {
       ScreenCapture.allowScreenCaptureAsync().catch(() => {});
@@ -119,7 +149,7 @@ const PdfDisplayScreen: React.FC<Props> = ({ route, navigation }) => {
   }, []);
 
   useEffect(() => {
-    const load = async () => {
+    const prepare = async () => {
       if (!pdfUrl) {
         setError('No PDF file was found for this item.');
         setLoading(false);
@@ -127,19 +157,48 @@ const PdfDisplayScreen: React.FC<Props> = ({ route, navigation }) => {
       }
       try {
         setLoading(true);
-        const base64 = await FileSystem.readAsStringAsync(pdfUrl, {
-          encoding: 'base64' as any,
-        });
-        setHtml(buildViewerHtml(base64));
+
+        // Write the shared viewer HTML to disk once and reuse it for
+        // every PDF — avoids re-embedding the 1.4MB pdf.js payload
+        // through the bridge on every open.
+        const alreadyBuilt = await FileSystem.getInfoAsync(VIEWER_HTML_PATH);
+        if (!alreadyBuilt.exists) {
+          const [pdfJsAsset, pdfWorkerAsset] = await Asset.loadAsync([
+            PDFJS_LIB_ASSET,
+            PDFJS_WORKER_ASSET,
+          ]);
+          const pdfJsLocalUri = pdfJsAsset.localUri || pdfJsAsset.uri;
+          const pdfWorkerLocalUri = pdfWorkerAsset.localUri || pdfWorkerAsset.uri;
+
+          const [pdfJsSource, pdfWorkerSource] = await Promise.all([
+            FileSystem.readAsStringAsync(pdfJsLocalUri),
+            FileSystem.readAsStringAsync(pdfWorkerLocalUri),
+          ]);
+
+          await FileSystem.writeAsStringAsync(
+            VIEWER_HTML_PATH,
+            buildViewerHtml(pdfJsSource, pdfWorkerSource)
+          );
+        }
+
+        setViewerReady(true);
       } catch (err) {
-        console.error('Error reading PDF:', err);
-        setError('Failed to load this PDF. Please try again.');
+        console.error('Error preparing PDF viewer:', err);
+        setError('Failed to prepare the PDF viewer. Please try again.');
       } finally {
         setLoading(false);
       }
     };
-    load();
+    prepare();
   }, [pdfUrl]);
+
+  // Runs inside the WebView right before its own <script> tags run —
+  // hands the target PDF's file path to the page without ever routing
+  // the PDF's *contents* through React Native.
+  const injectedJavaScriptBeforeContentLoaded = `
+    window.__PDF_FILE_URI__ = ${JSON.stringify(pdfUrl)};
+    true;
+  `;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -153,9 +212,9 @@ const PdfDisplayScreen: React.FC<Props> = ({ route, navigation }) => {
       {loading ? (
         <View style={styles.centerBox}>
           <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.statusText}>Loading PDF...</Text>
+          <Text style={styles.statusText}>Preparing PDF viewer...</Text>
         </View>
-      ) : error || !html ? (
+      ) : error || !viewerReady ? (
         <View style={styles.centerBox}>
           <Text style={styles.errorIcon}>📄</Text>
           <Text style={styles.errorTitle}>Unable to Load PDF</Text>
@@ -167,11 +226,15 @@ const PdfDisplayScreen: React.FC<Props> = ({ route, navigation }) => {
       ) : (
         <WebView
           originWhitelist={['*']}
-          source={{ html }}
+          source={{ uri: VIEWER_HTML_PATH }}
+          injectedJavaScriptBeforeContentLoaded={injectedJavaScriptBeforeContentLoaded}
           style={{ flex: 1, backgroundColor: '#525659' }}
           javaScriptEnabled
           domStorageEnabled
           allowFileAccess
+          allowFileAccessFromFileURLs
+          allowUniversalAccessFromFileURLs
+          allowingReadAccessToURL={FileSystem.documentDirectory || undefined}
           setSupportMultipleWindows={false}
         />
       )}

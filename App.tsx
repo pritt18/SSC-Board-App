@@ -15,16 +15,10 @@ import { LogBox, View, Text, ActivityIndicator, StyleSheet, Platform } from 'rea
 // Ignore specific warnings
 LogBox.ignoreAllLogs();
 
-// Screens that already have their own logo, or a header button in the same
-// top-right corner (Logout / + Add / + Generate) — the watermark is hidden
-// here so it never overlaps existing text/buttons.
 const CORNER_LOGO_HIDDEN_ROUTES = [
   'Login',
   'Register',
   'ForgotPassword',
-  // Every screen in AdminNavigator — nearly all of them have their own
-  // header-right button (Add/Save/Generate/Active-Inactive/Logout etc.)
-  // that the watermark would otherwise sit on top of.
   'AdminDashboard',
   'ManageUsers',
   'UserDetail',
@@ -49,14 +43,11 @@ const CORNER_LOGO_HIDDEN_ROUTES = [
   'EditSubject',
   'ManageGames',
   'GameForm',
-  // Parent tabs already show a welcome header with the account name —
-  // the corner watermark was clashing there too.
   'ParentDashboard',
   'ParentProgress',
   'ParentQuizResults',
   'ParentStudyTime',
   'ParentNotifications',
-  // Teacher screens with their own header-right button ('+ Create' / 'Logout')
   'TeacherDashboard',
   'TeacherQuizzes',
   'TeacherAssignments',
@@ -70,6 +61,7 @@ export default function App() {
   const [isReady, setIsReady] = useState(false);
   const [minTimeElapsed, setMinTimeElapsed] = useState(false);
   const [showCornerLogo, setShowCornerLogo] = useState(true);
+  const [dbError, setDbError] = useState<string | null>(null);
 
   useEffect(() => {
     // Keep the splash visible for at least 1.8s so the logo is
@@ -81,13 +73,10 @@ export default function App() {
   useEffect(() => {
     const setupDatabase = async () => {
       try {
-        // Skip SQLite on web (for development)
-        if (Platform.OS === 'web') {
-          console.log('Web platform - skipping SQLite');
-          setIsReady(true);
-          return;
-        }
-
+        // NOTE: expo-sqlite DOES support web now (via a WASM build —
+        // see metro.config.js for the required asset/header setup).
+        // We no longer skip database init on web; it runs the same
+        // way as native.
         console.log('Initializing database...');
         await initializeDatabase();
         console.log('Seeding database...');
@@ -95,6 +84,11 @@ export default function App() {
         console.log('✅ Database initialized successfully');
       } catch (error) {
         console.error('❌ Database initialization failed:', error);
+        setDbError(
+          Platform.OS === 'web'
+            ? 'The database failed to start in the browser. This feature is experimental on web — try the Expo Go app for the full experience.'
+            : 'The database failed to start. Please restart the app.'
+        );
       } finally {
         setIsReady(true);
       }
@@ -107,15 +101,13 @@ export default function App() {
     return <SplashScreen />;
   }
 
-  // For web, show a message
-  if (Platform.OS === 'web') {
+  if (dbError) {
     return (
       <SafeAreaProvider>
         <StatusBar style="auto" />
         <View style={styles.webContainer}>
           <Text style={styles.webTitle}>SSC Board App</Text>
-          <Text style={styles.webSubtitle}>Please use mobile app for full features</Text>
-          <Text style={styles.webNote}>Open with Expo Go or development build on Android/iOS</Text>
+          <Text style={styles.webSubtitle}>{dbError}</Text>
         </View>
       </SafeAreaProvider>
     );
@@ -177,9 +169,11 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   webSubtitle: {
-    fontSize: 18,
+    fontSize: 16,
     color: '#333',
-    marginBottom: 20,
+    marginBottom: 10,
+    textAlign: 'center',
+    lineHeight: 22,
   },
   webNote: {
     fontSize: 14,

@@ -19,6 +19,8 @@ import { COLORS } from '../../constants/colors';
 import { executeQuery } from '../../database/database';
 import { AdminStackParamList } from '../../navigation/AdminNavigator';
 import { Ionicons } from '@expo/vector-icons';
+import { confirmAction, showAlert } from '../../utils/confirmAction';
+import { deleteFile } from '../../utils/fileStorage';
 
 type Props = NativeStackScreenProps<AdminStackParamList, 'ManagePdfs'>;
 
@@ -100,7 +102,7 @@ const ManagePdfsScreen: React.FC<Props> = ({ navigation }) => {
       setFilteredPdfs(items as PdfItem[]);
     } catch (error) {
       console.error('Error loading PDFs:', error);
-      Alert.alert('Error', 'Failed to load PDFs');
+      showAlert('Error', 'Failed to load PDFs');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -146,52 +148,48 @@ const ManagePdfsScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
 
-  const handleToggleActive = async (id: number, currentStatus: boolean) => {
-    Alert.alert(
+  // Fixed: Alert.alert() with multiple buttons + callbacks doesn't
+  // work on web — this now uses confirmAction(), which falls back to
+  // the browser's real confirm() dialog on web.
+  const handleToggleActive = (id: number, currentStatus: boolean) => {
+    confirmAction(
       `${currentStatus ? 'Deactivate' : 'Activate'} PDF`,
       `Are you sure you want to ${currentStatus ? 'deactivate' : 'activate'} this PDF?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Confirm',
-          style: currentStatus ? 'destructive' : 'default',
-          onPress: async () => {
-            try {
-              await executeQuery(
-                `UPDATE pdfs SET is_active = ? WHERE id = ?`,
-                [currentStatus ? 0 : 1, id]
-              );
-              loadPdfs();
-              Alert.alert('Success', `PDF ${currentStatus ? 'deactivated' : 'activated'}`);
-            } catch (error) {
-              Alert.alert('Error', 'Failed to update PDF status');
-            }
-          },
-        },
-      ]
+      async () => {
+        try {
+          await executeQuery(
+            `UPDATE pdfs SET is_active = ? WHERE id = ?`,
+            [currentStatus ? 0 : 1, id]
+          );
+          loadPdfs();
+          showAlert('Success', `PDF ${currentStatus ? 'deactivated' : 'activated'}`);
+        } catch (error) {
+          showAlert('Error', 'Failed to update PDF status');
+        }
+      },
+      'Confirm',
+      currentStatus
     );
   };
 
-  const handleDeletePdf = async (id: number, title: string) => {
-    Alert.alert(
+  const handleDeletePdf = (id: number, title: string, pdfUrl: string) => {
+    confirmAction(
       'Delete PDF',
       `Are you sure you want to delete "${title}"? This action cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await executeQuery(`DELETE FROM pdfs WHERE id = ?`, [id]);
-              loadPdfs();
-              Alert.alert('Success', 'PDF deleted successfully');
-            } catch (error) {
-              Alert.alert('Error', 'Failed to delete PDF');
-            }
-          },
-        },
-      ]
+      async () => {
+        try {
+          await executeQuery(`DELETE FROM pdfs WHERE id = ?`, [id]);
+          // Also clean up the actual stored file (native file or web
+          // IndexedDB entry) — safe to call even if it's already gone.
+          await deleteFile(pdfUrl);
+          loadPdfs();
+          showAlert('Success', 'PDF deleted successfully');
+        } catch (error) {
+          showAlert('Error', 'Failed to delete PDF');
+        }
+      },
+      'Delete',
+      true
     );
   };
 
@@ -362,7 +360,7 @@ const ManagePdfsScreen: React.FC<Props> = ({ navigation }) => {
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.actionButton, styles.deleteButton]}
-                  onPress={() => handleDeletePdf(pdf.id, pdf.title)}
+                  onPress={() => handleDeletePdf(pdf.id, pdf.title, pdf.pdf_url)}
                 >
                   <Ionicons name="trash-outline" size={16} color="#DC2626" />
                   <Text style={styles.deleteButtonText}>Delete</Text>

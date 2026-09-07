@@ -13,10 +13,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system/legacy';
-
-import { COLORS } from '../../constants/colors';
 import { executeQuery } from '../../database/database';
+import { COLORS } from '../../constants/colors';
+import { saveFile, getFreeSpaceBytes } from '../../utils/fileStorage';
+import { showAlert } from '../../utils/confirmAction';
 
 interface ClassRow {
   id: number;
@@ -26,6 +26,7 @@ interface ClassRow {
 interface PickedFile {
   name: string;
   uri: string;
+  size?: number;
   subjectName: string; // editable, auto-guessed from filename — groups the PDF under a subject
   pdfTitle: string; // editable, auto-guessed from filename — what students actually see as the title
 }
@@ -38,6 +39,13 @@ const guessSubjectName = (fileName: string): string => {
     .split(' ')
     .map((w) => (w.length > 0 ? w[0].toUpperCase() + w.slice(1) : w))
     .join(' ');
+};
+
+const formatBytes = (bytes: number): string => {
+  if (bytes >= 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  if (bytes >= 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${bytes} B`;
 };
 
 const BulkImportPdfsScreen: React.FC<any> = ({ navigation }) => {
@@ -82,6 +90,7 @@ const BulkImportPdfsScreen: React.FC<any> = ({ navigation }) => {
       const picked: PickedFile[] = result.assets.map((asset) => ({
         name: asset.name,
         uri: asset.uri,
+        size: asset.size,
         subjectName: guessSubjectName(asset.name),
         pdfTitle: guessSubjectName(asset.name),
       }));
@@ -89,7 +98,7 @@ const BulkImportPdfsScreen: React.FC<any> = ({ navigation }) => {
       setFiles((prev) => [...prev, ...picked]);
     } catch (error) {
       console.error('Error picking PDFs:', error);
-      Alert.alert('Error', 'Failed to select PDF files.');
+      showAlert('Error', 'Failed to select PDF files.');
     }
   };
 
@@ -134,42 +143,66 @@ const BulkImportPdfsScreen: React.FC<any> = ({ navigation }) => {
     return created[0].id;
   };
 
+  const checkStorageBeforeImport = async (): Promise<boolean> => {
+    try {
+      const freeBytes = await getFreeSpaceBytes();
+      // getFreeSpaceBytes() returns null on web — there's no such
+      // concept in a browser sandbox, so just skip the check there.
+      if (freeBytes === null) return true;
+
+      const totalIncomingBytes = files.reduce((sum, f) => sum + (f.size || 0), 0);
+      const safetyBuffer = 200 * 1024 * 1024;
+
+      if (totalIncomingBytes > 0 && freeBytes - totalIncomingBytes < safetyBuffer) {
+        return await new Promise((resolve) => {
+          Alert.alert(
+            'Low Storage Warning',
+            `This device has ${formatBytes(freeBytes)} free. These ${files.length} file(s) need about ${formatBytes(totalIncomingBytes)}. Importing may fill up the device's storage.\n\nContinue anyway?`,
+            [
+              { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+              { text: 'Import Anyway', style: 'destructive', onPress: () => resolve(true) },
+            ]
+          );
+        });
+      }
+      return true;
+    } catch (error) {
+      console.error('Error checking free storage:', error);
+      return true;
+    }
+  };
+
   const handleImportAll = async () => {
     if (!selectedClassId) {
-      Alert.alert('Error', 'Please select a class first.');
+      showAlert('Error', 'Please select a class first.');
       return;
     }
     if (files.length === 0) {
-      Alert.alert('Error', 'Please select at least one PDF file.');
+      showAlert('Error', 'Please select at least one PDF file.');
       return;
     }
     const emptyName = files.some((f) => !f.subjectName.trim() || !f.pdfTitle.trim());
     if (emptyName) {
-      Alert.alert('Error', 'Every file needs both a subject name and a PDF title. Please fill in the blanks.');
+      showAlert('Error', 'Every file needs both a subject name and a PDF title. Please fill in the blanks.');
       return;
     }
+
+    const canProceed = await checkStorageBeforeImport();
+    if (!canProceed) return;
 
     setImporting(true);
     let successCount = 0;
     let failCount = 0;
+    const failedNames: string[] = [];
 
     try {
-      await FileSystem.makeDirectoryAsync(
-        FileSystem.documentDirectory + 'pdfs/',
-        { intermediates: true }
-      ).catch(() => {});
-
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         setProgressText(`Importing ${i + 1} of ${files.length}: ${file.name}`);
         try {
-          const safeName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
-          const destPath = `${FileSystem.documentDirectory}pdfs/${safeName}`;
-
-          await FileSystem.copyAsync({
-            from: file.uri,
-            to: destPath,
-          });
+          // Cross-platform: copies into app storage on native, saves
+          // into IndexedDB on web. See src/utils/fileStorage.ts.
+          const storedRef = await saveFile(file.uri, file.name, 'pdfs');
 
           const subjectId = await findOrCreateSubject(
             selectedClassId,
@@ -183,7 +216,7 @@ const BulkImportPdfsScreen: React.FC<any> = ({ navigation }) => {
               subjectId,
               file.pdfTitle.trim(),
               file.pdfTitle.trim(),
-              destPath,
+              storedRef,
               medium,
             ]
           );
@@ -192,21 +225,26 @@ const BulkImportPdfsScreen: React.FC<any> = ({ navigation }) => {
         } catch (fileError) {
           console.error(`Error importing ${file.name}:`, fileError);
           failCount++;
+          failedNames.push(file.name);
         }
       }
 
-      Alert.alert(
+      showAlert(
         'Import Complete',
         `${successCount} PDF(s) imported successfully.${
-          failCount > 0 ? `\n${failCount} file(s) failed.` : ''
-        }`,
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
+          failCount > 0 ? `\n${failCount} file(s) failed: ${failedNames.join(', ')}` : ''
+        }`
       );
+      if (successCount > 0) {
+        navigation.goBack();
+      }
     } finally {
       setImporting(false);
       setProgressText('');
     }
   };
+
+  const totalSelectedSize = files.reduce((sum, f) => sum + (f.size || 0), 0);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -254,7 +292,8 @@ const BulkImportPdfsScreen: React.FC<any> = ({ navigation }) => {
         </View>
 
         <Text style={styles.sectionLabel}>
-          3. Pick PDF Files ({files.length} selected)
+          3. Pick PDF Files ({files.length} selected
+          {totalSelectedSize > 0 ? `, ${formatBytes(totalSelectedSize)}` : ''})
         </Text>
         <View style={styles.pickRow}>
           <TouchableOpacity style={styles.pickButton} onPress={handlePickFiles}>
@@ -277,7 +316,7 @@ const BulkImportPdfsScreen: React.FC<any> = ({ navigation }) => {
           <View key={`${file.uri}-${index}`} style={styles.fileRow}>
             <View style={{ flex: 1 }}>
               <Text style={styles.fileName} numberOfLines={1}>
-                {file.name}
+                {file.name} {file.size ? `(${formatBytes(file.size)})` : ''}
               </Text>
 
               <Text style={styles.fileLabel}>PDF title (what students see):</Text>

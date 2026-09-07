@@ -6,7 +6,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
   TextInput,
 } from 'react-native';
@@ -16,6 +15,7 @@ import { COLORS } from '../../constants/colors';
 import { executeQuery } from '../../database/database';
 import { AdminStackParamList } from '../../navigation/AdminNavigator';
 import { Ionicons } from '@expo/vector-icons';
+import { showAlert } from '../../utils/confirmAction';
 
 type Props = NativeStackScreenProps<AdminStackParamList, 'EditVideo'>;
 
@@ -32,7 +32,6 @@ interface Chapter {
 }
 
 const EditVideoScreen: React.FC<Props> = ({ navigation, route }) => {
-  // Safely get videoId from route params
   const videoId = route?.params?.videoId;
 
   const [loading, setLoading] = useState(true);
@@ -50,11 +49,9 @@ const EditVideoScreen: React.FC<Props> = ({ navigation, route }) => {
   });
 
   useEffect(() => {
-    // If no videoId, show error and go back
     if (!videoId) {
-      Alert.alert('Error', 'No video selected', [
-        { text: 'OK', onPress: () => navigation.goBack() }
-      ]);
+      showAlert('Error', 'No video selected');
+      navigation.goBack();
       return;
     }
 
@@ -100,12 +97,11 @@ const EditVideoScreen: React.FC<Props> = ({ navigation, route }) => {
           sortOrder: String(video.sort_order || 1),
         });
       } else {
-        Alert.alert('Error', 'Video not found', [
-          { text: 'OK', onPress: () => navigation.goBack() }
-        ]);
+        showAlert('Error', 'Video not found');
+        navigation.goBack();
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to load video');
+      showAlert('Error', 'Failed to load video');
     } finally {
       setLoading(false);
     }
@@ -148,7 +144,7 @@ const EditVideoScreen: React.FC<Props> = ({ navigation, route }) => {
 
   const handleUpdate = async () => {
     if (!formData.title || !formData.subjectId) {
-      Alert.alert('Error', 'Title and Subject are required');
+      showAlert('Error', 'Title and Subject are required');
       return;
     }
 
@@ -175,13 +171,12 @@ const EditVideoScreen: React.FC<Props> = ({ navigation, route }) => {
           videoId
         ]
       );
-      
-      Alert.alert('Success', 'Video updated successfully', [
-        { text: 'OK', onPress: () => navigation.goBack() }
-      ]);
+
+      showAlert('Success', 'Video updated successfully');
+      navigation.goBack();
     } catch (error) {
       console.error('Error updating video:', error);
-      Alert.alert('Error', 'Failed to update video');
+      showAlert('Error', 'Failed to update video');
     } finally {
       setSaving(false);
     }

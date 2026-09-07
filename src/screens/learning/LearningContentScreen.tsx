@@ -27,30 +27,45 @@ const LearningContentScreen: React.FC<Props> = ({
 }) => {
   const { subjectId } = route.params;
 
+  // ---------------------------------------
+  // VIDEO
+  // ---------------------------------------
   const handleVideoPress = () => {
     navigation.navigate('VideoPlayer', {
       subjectId,
     });
   };
 
+  // ---------------------------------------
+  // PDF
+  // ---------------------------------------
   const handlePdfPress = () => {
     navigation.navigate('PdfViewer', {
       subjectId,
     });
   };
 
+  // ---------------------------------------
+  // QUIZ
+  // ---------------------------------------
   const handleQuizPress = () => {
     navigation.navigate('QuizList', {
       subjectId,
     });
   };
 
+  // ---------------------------------------
+  // NOTES
+  // ---------------------------------------
   const handleNotesPress = () => {
-  navigation.navigate('Notes', {
-    subjectId,
-  });
-};
+    navigation.navigate('Notes', {
+      subjectId,
+    });
+  };
 
+  // ---------------------------------------
+  // PRACTICE QUESTIONS
+  // ---------------------------------------
   const handlePracticePress = () => {
     console.log(
       'Practice Questions clicked for subject:',
@@ -58,20 +73,64 @@ const LearningContentScreen: React.FC<Props> = ({
     );
   };
 
+  // ---------------------------------------
+  // GAMES
+  // ---------------------------------------
   const handleGamesPress = () => {
     console.log(
       'Games clicked for subject:',
       subjectId,
     );
+
+    /**
+     * LearningStack is nested inside the
+     * Student bottom-tab navigator.
+     *
+     * Games is a route of the parent
+     * StudentTab navigator.
+     *
+     * Therefore we navigate to the parent.
+     */
+    const parentNavigation = navigation.getParent();
+
+    if (parentNavigation) {
+      parentNavigation.navigate('Games');
+    } else {
+      console.warn(
+        'Games navigation: Parent navigator not found',
+      );
+    }
   };
 
+  // ---------------------------------------
+  // PUZZLES
+  // ---------------------------------------
   const handlePuzzlesPress = () => {
     console.log(
       'Puzzles clicked for subject:',
       subjectId,
     );
+
+    /**
+     * Puzzles are part of the Games module.
+     *
+     * Games is available as a bottom tab in
+     * StudentNavigator.
+     */
+    const parentNavigation = navigation.getParent();
+
+    if (parentNavigation) {
+      parentNavigation.navigate('Games');
+    } else {
+      console.warn(
+        'Puzzles navigation: Parent navigator not found',
+      );
+    }
   };
 
+  // ---------------------------------------
+  // ASSIGNMENT
+  // ---------------------------------------
   const handleAssignmentPress = () => {
     console.log(
       'Assignment clicked for subject:',
@@ -79,6 +138,9 @@ const LearningContentScreen: React.FC<Props> = ({
     );
   };
 
+  // ---------------------------------------
+  // LEARNING OPTIONS
+  // ---------------------------------------
   const learningOptions = [
     {
       id: 1,
@@ -147,12 +209,13 @@ const LearningContentScreen: React.FC<Props> = ({
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
+        {/* ---------------------------------------
+            HEADER
+        --------------------------------------- */}
         <View style={styles.header}>
           <Pressable
             style={styles.backButton}
-            onPress={() =>
-              navigation.goBack()
-            }
+            onPress={() => navigation.goBack()}
           >
             <Text style={styles.backText}>
               ‹
@@ -170,6 +233,9 @@ const LearningContentScreen: React.FC<Props> = ({
           </View>
         </View>
 
+        {/* ---------------------------------------
+            PROGRESS
+        --------------------------------------- */}
         <View style={styles.progressCard}>
           <View style={styles.progressHeader}>
             <Text style={styles.progressTitle}>
@@ -190,10 +256,16 @@ const LearningContentScreen: React.FC<Props> = ({
           </Text>
         </View>
 
+        {/* ---------------------------------------
+            SECTION TITLE
+        --------------------------------------- */}
         <Text style={styles.sectionTitle}>
           Learning Content
         </Text>
 
+        {/* ---------------------------------------
+            CARDS
+        --------------------------------------- */}
         <View style={styles.grid}>
           {learningOptions.map(item => (
             <Pressable

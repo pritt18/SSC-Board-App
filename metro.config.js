@@ -13,6 +13,13 @@ if (!config.resolver.assetExts.includes('enc')) {
   config.resolver.assetExts.push('enc');
 }
 
+// Bundled pdf.js library source files (used for fully-offline in-app
+// PDF viewing) are stored with a .txt extension so Metro treats them
+// as plain-text assets instead of trying to parse them as JS modules.
+if (!config.resolver.assetExts.includes('txt')) {
+  config.resolver.assetExts.push('txt');
+}
+
 // Required for expo-sqlite to run in the browser (web build) — it loads
 // a WASM SQLite engine and needs SharedArrayBuffer, which browsers only
 // allow on "cross-origin isolated" pages (hence the COEP/COOP headers).

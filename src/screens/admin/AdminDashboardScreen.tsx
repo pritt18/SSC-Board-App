@@ -10,6 +10,7 @@ import {
   RefreshControl,
   Dimensions,
   Alert,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -56,6 +57,33 @@ interface QuickAction {
   params?: any;
 }
 
+// -----------------------------------------------------------------
+// React Native's Alert.alert() with multiple buttons + onPress
+// callbacks does not work reliably on web (react-native-web has very
+// limited/no support for it — the dialog either doesn't show or the
+// button callbacks never fire). This small helper uses the browser's
+// real window.confirm() on web, and the normal native Alert
+// everywhere else, so "Logout" (and any other confirm dialog) always
+// actually does something when tapped.
+// -----------------------------------------------------------------
+const confirmAction = (
+  title: string,
+  message: string,
+  onConfirm: () => void,
+  confirmLabel = 'OK'
+) => {
+  if (Platform.OS === 'web') {
+    const confirmed = window.confirm(`${title}\n\n${message}`);
+    if (confirmed) onConfirm();
+    return;
+  }
+
+  Alert.alert(title, message, [
+    { text: 'Cancel', style: 'cancel' },
+    { text: confirmLabel, style: 'destructive', onPress: onConfirm },
+  ]);
+};
+
 const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
   const { user, logout } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -85,10 +113,10 @@ const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
         quizzes, licenses, users,
         recentActivities
       ] = await Promise.all([
-        executeQuery('SELECT COUNT(*) as count FROM users WHERE role = "student" AND is_active = 1', []),
-        executeQuery('SELECT COUNT(*) as count FROM users WHERE role = "teacher" AND is_active = 1', []),
-        executeQuery('SELECT COUNT(*) as count FROM users WHERE role = "parent" AND is_active = 1', []),
-        executeQuery('SELECT COUNT(*) as count FROM users WHERE role = "admin" AND is_active = 1', []),
+        executeQuery(`SELECT COUNT(*) as count FROM users WHERE role = 'student' AND is_active = 1`, []),
+        executeQuery(`SELECT COUNT(*) as count FROM users WHERE role = 'teacher' AND is_active = 1`,[]),
+        executeQuery(`SELECT COUNT(*) as count FROM users WHERE role = 'parent' AND is_active = 1`,[]),
+        executeQuery(`SELECT COUNT(*) as count FROM users WHERE role = 'admin' AND is_active = 1`,[]),
         executeQuery('SELECT COUNT(*) as count FROM classes WHERE is_active = 1', []),
         executeQuery('SELECT COUNT(*) as count FROM subjects WHERE is_active = 1', []),
         executeQuery('SELECT COUNT(*) as count FROM videos WHERE is_active = 1', []),
@@ -142,27 +170,25 @@ const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
     loadStats();
   };
 
-  // ✅ Logout handler with confirmation
+  // ✅ Logout handler with confirmation (now works on web too)
   const handleLogout = () => {
-    Alert.alert(
+    confirmAction(
       'Logout',
       'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Logout', 
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await logout();
-              // Navigation will automatically go to Auth screen
-            } catch (error) {
-              console.error('Logout error:', error);
-              Alert.alert('Error', 'Failed to logout');
-            }
+      async () => {
+        try {
+          await logout();
+          // Navigation will automatically go to Auth screen
+        } catch (error) {
+          console.error('Logout error:', error);
+          if (Platform.OS === 'web') {
+            window.alert('Failed to logout');
+          } else {
+            Alert.alert('Error', 'Failed to logout');
           }
-        },
-      ]
+        }
+      },
+      'Logout'
     );
   };
 

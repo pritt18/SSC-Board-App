@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { Platform } from 'react-native';
 import {
   View,
   Text,
@@ -96,7 +97,7 @@ const ManageLicensesScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
 
-  const handleDeleteLicense = async (id: number, key: string) => {
+  /*const handleDeleteLicense = async (id: number, key: string) => {
     Alert.alert(
       'Delete License',
       `Are you sure you want to delete license "${key}"?`,
@@ -117,7 +118,60 @@ const ManageLicensesScreen: React.FC<Props> = ({ navigation }) => {
         },
       ]
     );
+  };*/
+  const handleDeleteLicense = async (id: number, key: string) => {
+  const deleteLicense = async () => {
+    try {
+      console.log('Deleting license:', id, key);
+
+      await executeQuery(
+        `DELETE FROM licenses WHERE id = ?`,
+        [id]
+      );
+
+      console.log('License deleted successfully:', id);
+
+      await loadLicenses();
+
+      Alert.alert('Success', 'License deleted successfully');
+    } catch (error) {
+      console.error('Delete license error:', error);
+
+      Alert.alert(
+        'Error',
+        `Failed to delete license: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
   };
+
+  if (Platform.OS === 'web') {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete license "${key}"?`
+    );
+
+    if (confirmed) {
+      await deleteLicense();
+    }
+  } else {
+    Alert.alert(
+      'Delete License',
+      `Are you sure you want to delete license "${key}"?`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: deleteLicense,
+        },
+      ]
+    );
+  }
+};
 
   const formatDate = (dateString: string) => {
     if (!dateString) return 'N/A';

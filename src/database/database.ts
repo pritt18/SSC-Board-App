@@ -1,4 +1,5 @@
 // src/database/database.ts
+
 import * as SQLite from 'expo-sqlite';
 import { schema } from './schema';
 import { migrations } from './migrations';
@@ -12,6 +13,7 @@ export const getDatabase = async (): Promise<SQLite.SQLiteDatabase> => {
     db = await SQLite.openDatabaseAsync('sscboard.db');
     console.log('SQLite database opened successfully');
   }
+
   return db;
 };
 
@@ -23,6 +25,7 @@ export const initializeDatabase = async (): Promise<void> => {
 
   try {
     console.log('Initializing SQLite database...');
+
     const database = await getDatabase();
 
     // Enable foreign keys
@@ -43,73 +46,146 @@ export const initializeDatabase = async (): Promise<void> => {
 
     console.log('Database tables created');
 
-    // Run migrations (ALTER TABLE statements)
+    // Run migrations
     console.log('Running migrations...');
+
     for (const migration of migrations) {
       try {
         await database.execAsync(migration);
-        console.log('Migration executed:', migration.substring(0, 50) + '...');
+
+        console.log(
+          'Migration executed:',
+          migration.substring(0, 50) + '...'
+        );
       } catch (error: any) {
-        // Some migrations may fail if columns already exist
-        // This is expected and can be ignored
-        console.log('Migration skipped (likely already applied):', error?.message || error);
+        // Migration may already be applied
+        console.log(
+          'Migration skipped (likely already applied):',
+          error?.message || error
+        );
       }
     }
 
     isInitialized = true;
-    console.log('SQLite database initialized successfully');
+
+    console.log(
+      'SQLite database initialized successfully'
+    );
   } catch (error) {
-    console.error('Database initialization error:', error);
+    console.error(
+      'Database initialization error:',
+      error
+    );
+
     throw error;
   }
 };
 
-export const executeQuery = async (query: string, params: any[] = []): Promise<any[]> => {
+export const executeQuery = async (
+  query: string,
+  params: any[] = []
+): Promise<any[]> => {
   try {
     const database = await getDatabase();
+
     const sql = query.trim().toLowerCase();
 
-    console.log('Executing SQL:', query, params);
+    console.log(
+      'Executing SQL:',
+      query,
+      params
+    );
 
+    // SELECT query
     if (sql.startsWith('select')) {
-      const rows = await database.getAllAsync(query, ...params);
+      const rows = await database.getAllAsync(
+        query,
+        ...params
+      );
+
       return rows as any[];
     }
 
-    const result = await database.runAsync(query, ...params);
-    console.log('Query completed:', { lastInsertRowId: result.lastInsertRowId, changes: result.changes });
+    // INSERT / UPDATE / DELETE
+    const result = await database.runAsync(
+      query,
+      ...params
+    );
+
+    console.log('Query completed:', {
+      lastInsertRowId: result.lastInsertRowId,
+      changes: result.changes,
+    });
+
     return [];
   } catch (error) {
-    console.error('Query execution error:', error);
+    console.error(
+      'Query execution error:',
+      error
+    );
+
     throw error;
   }
 };
 
-export const executeTransaction = async (queries: { query: string; params?: any[] }[]): Promise<void> => {
+export const executeTransaction = async (
+  queries: {
+    query: string;
+    params?: any[];
+  }[]
+): Promise<void> => {
   const database = await getDatabase();
+
   try {
-    await database.withTransactionAsync(async () => {
-      for (const { query, params = [] } of queries) {
-        await database.runAsync(query, ...params);
+    await database.withTransactionAsync(
+      async () => {
+        for (const {
+          query,
+          params = [],
+        } of queries) {
+          await database.runAsync(
+            query,
+            ...params
+          );
+        }
       }
-    });
-    console.log('Transaction completed successfully');
+    );
+
+    console.log(
+      'Transaction completed successfully'
+    );
   } catch (error) {
-    console.error('Transaction failed:', error);
+    console.error(
+      'Transaction failed:',
+      error
+    );
+
     throw error;
   }
 };
 
-export const isDatabaseReady = () => isInitialized;
+export const isDatabaseReady = () => {
+  return isInitialized;
+};
 
 export const closeDatabase = async (): Promise<void> => {
-  if (!db) return;
+  if (!db) {
+    return;
+  }
+
   try {
     await db.closeAsync();
+
     db = null;
     isInitialized = false;
-    console.log('SQLite database closed');
+
+    console.log(
+      'SQLite database closed'
+    );
   } catch (error) {
-    console.error('Error closing database:', error);
+    console.error(
+      'Error closing database:',
+      error
+    );
   }
 };

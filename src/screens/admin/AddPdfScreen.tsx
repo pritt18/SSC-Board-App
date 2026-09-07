@@ -11,12 +11,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system/legacy';
 import { COLORS } from '../../constants/colors';
 import { executeQuery } from '../../database/database';
 import { AdminStackParamList } from '../../navigation/AdminNavigator';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
+import { saveFile } from '../../utils/fileStorage';
+import { showAlert } from '../../utils/confirmAction';
 
 type Props = NativeStackScreenProps<AdminStackParamList, 'AddPdf'>;
 
@@ -88,71 +89,55 @@ const AddPdfScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
 
+  // Now works on both native (copies into app storage) and web
+  // (saves into IndexedDB) — see src/utils/fileStorage.ts.
   const copyPdfToAssets = async (sourceUri: string, fileName: string) => {
-    try {
-      const destPath = `${FileSystem.documentDirectory}pdfs/${fileName}`;
-      
-      await FileSystem.makeDirectoryAsync(
-        FileSystem.documentDirectory + 'pdfs/',
-        { intermediates: true }
-      ).catch(() => {});
-
-      await FileSystem.copyAsync({
-        from: sourceUri,
-        to: destPath,
-      });
-
-      return destPath;
-    } catch (error) {
-      console.error('Error copying PDF:', error);
-      throw error;
-    }
+    return saveFile(sourceUri, fileName, 'pdfs');
   };
 
-  // src/screens/admin/AddPdfScreen.tsx - Updated handleAddPdf
-const handleAddPdf = async () => {
-  if (!formData.title || !formData.subjectId || !selectedFile) {
-    Alert.alert('Error', 'Please fill in all required fields and select a PDF');
-    return;
-  }
+  const handleAddPdf = async () => {
+    if (!formData.title || !formData.subjectId || !selectedFile) {
+      showAlert('Error', 'Please fill in all required fields and select a PDF');
+      return;
+    }
 
-  setLoading(true);
+    setLoading(true);
 
-  try {
-    await copyPdfToAssets(selectedFile.uri, selectedFile.name);
+    try {
+      const storedRef = await copyPdfToAssets(selectedFile.uri, selectedFile.name);
 
-    await executeQuery(
-      `INSERT INTO pdfs (
-        subject_id,
-        title_english,
-        title_marathi,
-        description_english,
-        description_marathi,
-        pdf_url,
-        sort_order,
-        is_active
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, 1)`,
-      [
-        parseInt(formData.subjectId),
-        formData.title,
-        formData.titleMarathi || formData.title,
-        formData.description || '',
-        formData.descriptionMarathi || '',
-        selectedFile.name,
-        parseInt(formData.sortOrder) || 1,
-      ]
-    );
+      await executeQuery(
+        `INSERT INTO pdfs (
+          subject_id,
+          title_english,
+          title_marathi,
+          description_english,
+          description_marathi,
+          pdf_url,
+          sort_order,
+          is_active
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, 1)`,
+        [
+          parseInt(formData.subjectId),
+          formData.title,
+          formData.titleMarathi || formData.title,
+          formData.description || '',
+          formData.descriptionMarathi || '',
+          storedRef,
+          parseInt(formData.sortOrder) || 1,
+        ]
+      );
 
-    Alert.alert('Success', 'PDF added successfully!');
-    navigation.goBack();
+      showAlert('Success', 'PDF added successfully!');
+      navigation.goBack();
 
-  } catch (error) {
-    console.error('Error adding PDF:', error);
-    Alert.alert('Error', 'Failed to add PDF');
-  } finally {
-    setLoading(false);
-  }
-};
+    } catch (error) {
+      console.error('Error adding PDF:', error);
+      showAlert('Error', 'Failed to add PDF. ' + ((error as any)?.message || ''));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>

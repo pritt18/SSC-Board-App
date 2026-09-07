@@ -56,18 +56,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('Stored hash:', userData.password_hash);
         
         if (userData.password_hash === expectedHash) {
-          // --- Device binding check (SRS section 18: one account = one device) ---
-          const currentDeviceId = await LicenseService.getDeviceId();
+          // --- Device binding check (फक्त स्टुडंटसाठी लागू, ॲडमिनसाठी नाही) ---
+          if (userData.role === 'student') {
+            const currentDeviceId = await LicenseService.getDeviceId();
 
-          if (!userData.device_id) {
-            // First login on any device: bind this device to the account.
-            await UserModel.updateDeviceId(userData.id as number, currentDeviceId);
-            userData.device_id = currentDeviceId;
-          } else if (userData.device_id !== currentDeviceId) {
-            // Account is already bound to a different device.
-            console.log('Login blocked: account already activated on another device');
-            setLastLoginError('This account is already activated on another device.');
-            return false;
+            if (!userData.device_id) {
+              // First login on any device: bind this device to the account.
+              await UserModel.updateDeviceId(userData.id as number, currentDeviceId);
+              userData.device_id = currentDeviceId;
+            } else if (userData.device_id !== currentDeviceId) {
+              // Account is already bound to a different device.
+              console.log('Login blocked: account already activated on another device');
+              setLastLoginError('This account is already activated on another device.');
+              return false;
+            }
           }
           // --- End device binding check ---
 

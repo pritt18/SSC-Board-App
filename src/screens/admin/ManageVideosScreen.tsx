@@ -7,7 +7,6 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   RefreshControl,
   Modal,
   TextInput,
@@ -19,6 +18,8 @@ import { COLORS } from '../../constants/colors';
 import { executeQuery } from '../../database/database';
 import { AdminStackParamList } from '../../navigation/AdminNavigator';
 import { Ionicons } from '@expo/vector-icons';
+import { confirmAction, showAlert } from '../../utils/confirmAction';
+import { deleteFile } from '../../utils/fileStorage';
 
 type Props = NativeStackScreenProps<AdminStackParamList, 'ManageVideos'>;
 
@@ -82,7 +83,7 @@ const ManageVideosScreen: React.FC<Props> = ({ navigation }) => {
       setFilteredVideos(items as VideoItem[]);
     } catch (error) {
       console.error('Error loading videos:', error);
-      Alert.alert('Error', 'Failed to load videos');
+      showAlert('Error', 'Failed to load videos');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -127,52 +128,48 @@ const ManageVideosScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
 
-  const handleToggleActive = async (id: number, currentStatus: boolean) => {
-    Alert.alert(
+  // Fixed: Alert.alert() with multiple buttons + callbacks doesn't
+  // work on web — this now uses confirmAction(), which falls back to
+  // the browser's real confirm() dialog on web.
+  const handleToggleActive = (id: number, currentStatus: boolean) => {
+    confirmAction(
       `${currentStatus ? 'Deactivate' : 'Activate'} Video`,
       `Are you sure you want to ${currentStatus ? 'deactivate' : 'activate'} this video?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Confirm',
-          style: currentStatus ? 'destructive' : 'default',
-          onPress: async () => {
-            try {
-              await executeQuery(
-                `UPDATE videos SET is_active = ? WHERE id = ?`,
-                [currentStatus ? 0 : 1, id]
-              );
-              loadVideos();
-              Alert.alert('Success', `Video ${currentStatus ? 'deactivated' : 'activated'}`);
-            } catch (error) {
-              Alert.alert('Error', 'Failed to update video status');
-            }
-          },
-        },
-      ]
+      async () => {
+        try {
+          await executeQuery(
+            `UPDATE videos SET is_active = ? WHERE id = ?`,
+            [currentStatus ? 0 : 1, id]
+          );
+          loadVideos();
+          showAlert('Success', `Video ${currentStatus ? 'deactivated' : 'activated'}`);
+        } catch (error) {
+          showAlert('Error', 'Failed to update video status');
+        }
+      },
+      'Confirm',
+      currentStatus
     );
   };
 
-  const handleDeleteVideo = async (id: number, title: string) => {
-    Alert.alert(
+  const handleDeleteVideo = (id: number, title: string, videoUrl: string) => {
+    confirmAction(
       'Delete Video',
       `Are you sure you want to delete "${title}"? This action cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await executeQuery(`DELETE FROM videos WHERE id = ?`, [id]);
-              loadVideos();
-              Alert.alert('Success', 'Video deleted successfully');
-            } catch (error) {
-              Alert.alert('Error', 'Failed to delete video');
-            }
-          },
-        },
-      ]
+      async () => {
+        try {
+          await executeQuery(`DELETE FROM videos WHERE id = ?`, [id]);
+          // Also clean up the actual stored file (native file or web
+          // IndexedDB entry) — safe to call even if it's already gone.
+          await deleteFile(videoUrl);
+          loadVideos();
+          showAlert('Success', 'Video deleted successfully');
+        } catch (error) {
+          showAlert('Error', 'Failed to delete video');
+        }
+      },
+      'Delete',
+      true
     );
   };
 
@@ -310,7 +307,7 @@ const ManageVideosScreen: React.FC<Props> = ({ navigation }) => {
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.actionButton, styles.deleteButton]}
-                  onPress={() => handleDeleteVideo(video.id, video.title)}
+                  onPress={() => handleDeleteVideo(video.id, video.title, video.video_url)}
                 >
                   <Ionicons name="trash-outline" size={16} color="#DC2626" />
                   <Text style={styles.deleteButtonText}>Delete</Text>

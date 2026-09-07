@@ -239,4 +239,23 @@ export const migrations: string[] = [
   // dropping/recreating the pdfs table above.
   `ALTER TABLE pdfs ADD COLUMN medium TEXT DEFAULT 'both'`,
   `CREATE INDEX IF NOT EXISTS idx_pdfs_medium ON pdfs(medium)`,
+
+  // ============================================
+  // DEFENSIVE / SELF-HEALING COLUMN CHECKS
+  // ============================================
+  // On some platforms (specifically the experimental web/WASM SQLite
+  // build) a "users" table can already exist in persisted browser
+  // storage from an early test run, created BEFORE some of the columns
+  // above existed. Because CREATE TABLE IF NOT EXISTS is a no-op on an
+  // existing table, that stale table never picks up new columns on its
+  // own. These ALTER TABLE statements each safely fail (and are
+  // skipped) if the column is already present, so they're safe to run
+  // on every launch, on every platform.
+  `ALTER TABLE users ADD COLUMN permissions TEXT DEFAULT 'user'`,
+  `ALTER TABLE users ADD COLUMN device_id TEXT`,
+  `ALTER TABLE users ADD COLUMN medium TEXT`,
+  `ALTER TABLE users ADD COLUMN class_id INTEGER`,
+  `ALTER TABLE users ADD COLUMN is_active BOOLEAN DEFAULT 1`,
+  `ALTER TABLE users ADD COLUMN is_approved BOOLEAN DEFAULT 1`,
+  `ALTER TABLE users ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP`,
 ];
