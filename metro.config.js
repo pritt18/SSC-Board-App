@@ -76,6 +76,8 @@ config.server.enhanceMiddleware = (middleware, metroServer) => {
           fileParam,
           path.resolve(fileParam),
           path.join('E:/SoftspireSolution/Document/ssc book content', fileParam),
+          path.join('E:/SoftspireSolution/Document/ssc book content/Books_English_Medium', fileParam),
+          path.join('E:/SoftspireSolution/Document/ssc book content/Books_Marathi_Medium', fileParam),
           path.join(__dirname, 'assets', 'pdfs', fileParam),
         ];
 
@@ -91,6 +93,7 @@ config.server.enhanceMiddleware = (middleware, metroServer) => {
           res.setHeader('Content-Type', 'application/pdf');
           res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
           res.setHeader('Access-Control-Allow-Origin', '*');
+          res.setHeader('Accept-Ranges', 'bytes');
           return fs.createReadStream(foundPath).pipe(res);
         } else {
           console.warn('PDF not found at candidate paths:', fileParam);
@@ -231,6 +234,69 @@ config.server.enhanceMiddleware = (middleware, metroServer) => {
         return;
       } catch (err) {
         console.error('Error in /api/drive-video:', err);
+        res.statusCode = 500;
+        return res.end('Internal server error');
+      }
+    }
+
+    // 6. Proxy Google Drive PDF stream with CORS/CORP headers
+    if (req.url.startsWith('/api/drive-pdf')) {
+      try {
+        const parsedUrl = new URL(req.url, 'http://localhost:8081');
+        const driveId = parsedUrl.searchParams.get('id');
+        if (!driveId) {
+          res.statusCode = 400;
+          return res.end('Missing drive id');
+        }
+
+        const googleUrl = `https://drive.usercontent.google.com/download?id=${driveId}&export=download`;
+        const headers = {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        };
+
+        const handleStream = (streamRes) => {
+          res.setHeader('Access-Control-Allow-Origin', '*');
+          res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+          res.setHeader('Content-Type', 'application/pdf');
+          res.setHeader('Accept-Ranges', 'bytes');
+          if (streamRes.headers['content-range']) {
+            res.setHeader('Content-Range', streamRes.headers['content-range']);
+          }
+          if (streamRes.headers['content-length']) {
+            res.setHeader('Content-Length', streamRes.headers['content-length']);
+          }
+          res.writeHead(streamRes.statusCode || 200);
+          streamRes.pipe(res);
+        };
+
+        const googleReq = https.get(googleUrl, { headers }, (googleRes) => {
+          if (googleRes.statusCode >= 300 && googleRes.statusCode < 400 && googleRes.headers.location) {
+            const redirReq = https.get(googleRes.headers.location, { headers }, (redirRes) => {
+              handleStream(redirRes);
+            });
+            redirReq.on('error', (err) => {
+              console.error('Drive PDF redirect stream error:', err);
+              if (!res.headersSent) {
+                res.statusCode = 502;
+                res.end('Error fetching redirect stream');
+              }
+            });
+            return;
+          }
+
+          handleStream(googleRes);
+        });
+
+        googleReq.on('error', (err) => {
+          console.error('Drive PDF stream error:', err);
+          if (!res.headersSent) {
+            res.statusCode = 502;
+            res.end('Error fetching PDF from drive');
+          }
+        });
+        return;
+      } catch (err) {
+        console.error('Error in /api/drive-pdf:', err);
         res.statusCode = 500;
         return res.end('Internal server error');
       }

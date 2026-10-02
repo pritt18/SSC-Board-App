@@ -91,6 +91,11 @@ const PdfDisplayScreen: React.FC<Props> = ({ route, navigation }) => {
     if (rawUrl.startsWith('idb://')) {
       return await resolveFileUri(rawUrl);
     }
+    // Check if it's a Google Drive link or ID
+    const driveMatch = rawUrl.match(/(?:drive\.google\.com\/(?:file\/d\/|open\?id=)|id=)([a-zA-Z0-9_-]+)/);
+    if (driveMatch) {
+      return `/api/drive-pdf?id=${driveMatch[1]}`;
+    }
     if (
       rawUrl.startsWith('blob:') ||
       rawUrl.startsWith('http://') ||

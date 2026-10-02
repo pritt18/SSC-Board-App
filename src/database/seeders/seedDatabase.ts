@@ -616,6 +616,25 @@ export const seedDatabase = async () => {
     // -----------------------------------------
     console.log('Seeding Maharashtra Board textbook PDFs...');
 
+    const getSubjectIconForSeed = (name: string): string => {
+      const n = name.toLowerCase();
+      if (n.includes('math')) return '➕';
+      if (n.includes('sci')) return '🔬';
+      if (n.includes('eng')) return '📚';
+      if (n.includes('mar')) return '📖';
+      if (n.includes('hin')) return '📕';
+      if (n.includes('hist')) return '🏛️';
+      if (n.includes('geo')) return '🌍';
+      if (n.includes('san')) return '🕉️';
+      if (n.includes('def') || n.includes('force')) return '🛡️';
+      if (n.includes('water')) return '💧';
+      if (n.includes('art') || n.includes('kala') || n.includes('music')) return '🎨';
+      if (n.includes('phys')) return '⚽';
+      if (n.includes('work') || n.includes('play')) return '🛠️';
+      if (n.includes('env') || n.includes('world')) return '🌱';
+      return '📚';
+    };
+
     for (const book of textbookPdfs) {
       const classRows = await executeQuery(
         `SELECT id FROM classes WHERE class_number = ? LIMIT 1`,
@@ -632,10 +651,11 @@ export const seedDatabase = async () => {
 
       let subjectId: number;
       if (!subjectRows || subjectRows.length === 0) {
+        const icon = getSubjectIconForSeed(book.subjectEnglish);
         await executeQuery(
           `INSERT INTO subjects (class_id, name_english, name_marathi, icon, is_active)
-           VALUES (?, ?, ?, '📚', 1)`,
-          [classId, book.subjectEnglish, book.subjectMarathi]
+           VALUES (?, ?, ?, ?, 1)`,
+          [classId, book.subjectEnglish, book.subjectMarathi, icon]
         );
         subjectRows = await executeQuery(
           `SELECT id FROM subjects WHERE class_id = ? AND LOWER(name_english) = LOWER(?) LIMIT 1`,
