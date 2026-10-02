@@ -23,6 +23,9 @@ import ManageClassesScreen from '../screens/admin/ManageClassesScreen';
 import ManageSubjectsScreen from '../screens/admin/ManageSubjectsScreen';
 import AddSubjectScreen from '../screens/admin/AddSubjectScreen';
 import EditSubjectScreen from '../screens/admin/EditSubjectScreen';
+import PdfDisplayScreen from '../screens/learning/PdfDisplayScreen';
+import VideoPlayerScreen from '../screens/learning/videos/VideoPlayerScreen';
+
 
 export type AdminStackParamList = {
   AdminDashboard: undefined;
@@ -47,6 +50,8 @@ export type AdminStackParamList = {
   ManageSubjects: { classId: number };
   AddSubject: { classId: number };
   EditSubject: { subjectId: number };
+  PdfDisplay: { pdfId: number; pdfUrl: string; title: string };
+  VideoPlayer: { subjectId: number; videoId?: number };
 };
 
 const Stack = createNativeStackNavigator<AdminStackParamList>();
@@ -80,8 +85,11 @@ const AdminNavigator: React.FC = () => {
       <Stack.Screen name="ManageSubjects" component={ManageSubjectsScreen} />
       <Stack.Screen name="AddSubject" component={AddSubjectScreen} />
       <Stack.Screen name="EditSubject" component={EditSubjectScreen} />
+      <Stack.Screen name="PdfDisplay" component={PdfDisplayScreen} />
+      <Stack.Screen name="VideoPlayer" component={VideoPlayerScreen} />
     </Stack.Navigator>
   );
 };
+
 
 export default AdminNavigator;

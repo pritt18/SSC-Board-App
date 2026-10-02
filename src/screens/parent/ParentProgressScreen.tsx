@@ -126,13 +126,13 @@ const ParentProgressScreen: React.FC = () => {
                   )}
                 </View>
                 <View style={styles.rowChips}>
-                  <Text style={[styles.chip, s.video_watched && styles.chipDone]}>
+                  <Text style={[styles.chip, !!s.video_watched && styles.chipDone]}>
                     {s.video_watched ? '✓' : '○'} Video
                   </Text>
-                  <Text style={[styles.chip, s.pdf_viewed && styles.chipDone]}>
+                  <Text style={[styles.chip, !!s.pdf_viewed && styles.chipDone]}>
                     {s.pdf_viewed ? '✓' : '○'} PDF
                   </Text>
-                  <Text style={[styles.chip, s.quiz_completed && styles.chipDone]}>
+                  <Text style={[styles.chip, !!s.quiz_completed && styles.chipDone]}>
                     {s.quiz_completed ? '✓' : '○'} Quiz
                   </Text>
                 </View>

@@ -1,5 +1,5 @@
 // src/screens/learning/videos/VideoPlayerScreen.tsx
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -8,8 +8,9 @@ import {
   StyleSheet,
   Text,
   View,
-  TouchableOpacity,  // ✅ ADD THIS IMPORT
+  TouchableOpacity,
   Dimensions,
+  Platform,
 } from 'react-native';
 import { AVPlaybackStatus, ResizeMode, Video } from 'expo-av';
 import * as ScreenOrientation from 'expo-screen-orientation';
@@ -21,15 +22,16 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../../constants/colors';
 import { executeQuery } from '../../../database/database';
-import { LearningStackParamList } from '../../../navigation/navigationTypes';
 import { useAuth } from '../../../context/AuthContext';
 import { videoAssets } from '../../../data/videoAssets';
 import { subtitleAssets } from '../../../data/subtitleAssets';
 import { parseSrt, SubtitleCue } from '../../../utils/subtitleParser';
+import { resolveFileUri } from '../../../utils/fileStorage';
 
 const { width } = Dimensions.get('window');
 
-type Props = NativeStackScreenProps<LearningStackParamList, 'VideoPlayer'>;
+type Props = NativeStackScreenProps<any, 'VideoPlayer'>;
+
 
 interface VideoItem {
   id: number;
@@ -47,13 +49,14 @@ interface VideoItem {
 const playbackRates = [0.5, 1, 1.5, 2];
 
 const VideoPlayerScreen: React.FC<Props> = ({ navigation, route }) => {
-  const { subjectId } = route.params;
+  const { subjectId, videoId: targetVideoId } = (route.params as any) || {};
   const { user } = useAuth();
   const videoRef = useRef<Video>(null);
   const lastSavedPosition = useRef(0);
 
   const [videos, setVideos] = useState<VideoItem[]>([]);
   const [selectedVideo, setSelectedVideo] = useState<VideoItem | null>(null);
+  const [videoSource, setVideoSource] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentPosition, setCurrentPosition] = useState(0);
@@ -74,34 +77,86 @@ const VideoPlayerScreen: React.FC<Props> = ({ navigation, route }) => {
     return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
   };
 
-  const getVideoSource = (videoUrl: string) => {
-    // Check if it's a bundled asset
-    const bundledVideo = videoAssets[videoUrl];
-    if (bundledVideo) {
-      return bundledVideo;
+  useEffect(() => {
+    if (!selectedVideo) {
+      setVideoSource(null);
+      return;
     }
-    
-    // Check if it's a local file
-    if (videoUrl.startsWith('file://')) {
-      return { uri: videoUrl };
-    }
-    
-    // For demo purposes, use the sample video if available
-    const sampleVideo = videoAssets['sample-video.mp4'];
-    if (sampleVideo) {
-      return sampleVideo;
-    }
-    
-    // Fallback: try to use the URL as is
-    return { uri: videoUrl };
-  };
+
+    let isMounted = true;
+
+    const resolveSource = async () => {
+      const url = selectedVideo.video_url;
+      if (!url) {
+        if (isMounted) setVideoSource(null);
+        return;
+      }
+
+      // 1. Check bundled asset dictionary
+      if (videoAssets[url]) {
+        if (isMounted) setVideoSource(videoAssets[url]);
+        return;
+      }
+
+      // 2. Explicit sample video reference
+      if (url === 'sample-video.mp4' && videoAssets['sample-video.mp4']) {
+        if (isMounted) setVideoSource(videoAssets['sample-video.mp4']);
+        return;
+      }
+
+      // 3. Web IndexedDB saved file (idb://...)
+      if (url.startsWith('idb://')) {
+        try {
+          const blobUrl = await resolveFileUri(url);
+          if (isMounted) setVideoSource({ uri: blobUrl });
+          return;
+        } catch (err) {
+          console.warn('Failed to resolve IndexedDB video URI:', err);
+        }
+      }
+
+      // 4. Local file:// on Web: routed through Metro 206 Partial Content server
+      if (Platform.OS === 'web' && url.startsWith('file://')) {
+        const proxyUri = `/api/video-content?file=${encodeURIComponent(url)}`;
+        if (isMounted) setVideoSource({ uri: proxyUri });
+        return;
+      }
+
+      // 5. Google Drive direct / usercontent URLs
+      const driveMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/) || url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+      if (driveMatch && driveMatch[1]) {
+        const driveId = driveMatch[1];
+        if (Platform.OS === 'web') {
+          // On Web: route through Metro reverse proxy to bypass browser CORP same-site and COEP restrictions
+          const proxyUri = `/api/drive-video?id=${driveId}`;
+          if (isMounted) setVideoSource({ uri: proxyUri });
+          return;
+        } else {
+          // On Native Android/iOS: direct high-speed streaming
+          const directStream = `https://drive.usercontent.google.com/download?id=${driveId}&export=download`;
+          if (isMounted) setVideoSource({ uri: directStream });
+          return;
+        }
+      }
+
+      // 6. Direct HTTP/HTTPS or Native file://
+      if (isMounted) setVideoSource({ uri: url });
+
+    };
+
+    resolveSource();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedVideo]);
 
   const loadVideos = async () => {
     try {
       setIsLoading(true);
       
-      const result = await executeQuery(
-        `SELECT 
+      let query = `
+        SELECT 
           id,
           subject_id,
           title_english,
@@ -114,25 +169,36 @@ const VideoPlayerScreen: React.FC<Props> = ({ navigation, route }) => {
           sort_order
         FROM videos
         WHERE subject_id = ? AND is_active = 1
-        ORDER BY sort_order ASC, id ASC`,
-        [subjectId]
-      );
+      `;
+      const params: any[] = [subjectId];
 
+      if (user?.medium && (user.medium === 'english' || user.medium === 'marathi')) {
+        query += ` AND (medium IS NULL OR medium = 'both' OR medium = ?)`;
+        params.push(user.medium);
+      }
+
+      query += ` ORDER BY sort_order ASC, id ASC`;
+
+      const result = await executeQuery(query, params);
       const videoData = result as VideoItem[];
       setVideos(videoData);
 
       if (videoData.length > 0) {
-        const savedProgress = await loadVideoProgress(videoData[0].id);
+        const initialVideo = targetVideoId 
+          ? videoData.find(v => v.id === targetVideoId) || videoData[0]
+          : videoData[0];
+
+        const savedProgress = await loadVideoProgress(initialVideo.id);
         setResumePosition(savedProgress);
-        setSelectedVideo(videoData[0]);
+        setSelectedVideo(initialVideo);
         
         // Load subtitles if available
-        if (videoData[0].subtitle_url) {
-          await loadSubtitles(videoData[0].subtitle_url);
+        if (initialVideo.subtitle_url) {
+          await loadSubtitles(initialVideo.subtitle_url);
         }
         
         // Check bookmark
-        await loadBookmark(videoData[0].id);
+        await loadBookmark(initialVideo.id);
       }
     } catch (error) {
       console.error('Error loading videos:', error);
@@ -141,6 +207,7 @@ const VideoPlayerScreen: React.FC<Props> = ({ navigation, route }) => {
       setIsLoading(false);
     }
   };
+
 
   const loadVideoProgress = async (videoId: number) => {
     if (!user?.id) return 0;
@@ -376,16 +443,18 @@ const VideoPlayerScreen: React.FC<Props> = ({ navigation, route }) => {
           <Video
             ref={videoRef}
             key={selectedVideo.id}
-            source={getVideoSource(selectedVideo.video_url)}
+            source={videoSource || { uri: selectedVideo.video_url }}
             style={styles.video}
             resizeMode={ResizeMode.CONTAIN}
-            useNativeControls={false}
+            useNativeControls={Platform.OS === 'web'}
             shouldPlay={false}
             positionMillis={resumePosition}
             rate={playbackRate}
             shouldCorrectPitch
             progressUpdateIntervalMillis={500}
             onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
+            onError={(e) => console.warn('Video playback error:', e)}
+
             onFullscreenUpdate={async ({ fullscreenUpdate }) => {
               if (fullscreenUpdate === 3) {
                 try {
@@ -397,18 +466,21 @@ const VideoPlayerScreen: React.FC<Props> = ({ navigation, route }) => {
             }}
           />
           
-          {/* Play/Pause Overlay */}
-          <TouchableOpacity
-            style={styles.playOverlay}
-            onPress={togglePlayPause}
-            activeOpacity={0.8}
-          >
-            <Ionicons
-              name={isPlaying ? 'pause-circle' : 'play-circle'}
-              size={72}
-              color="rgba(255,255,255,0.9)"
-            />
-          </TouchableOpacity>
+          {/* Play/Pause Overlay - only show big center button when paused so it doesn't block the video */}
+          {!isPlaying && (
+            <TouchableOpacity
+              style={styles.playOverlay}
+              onPress={togglePlayPause}
+              activeOpacity={0.8}
+            >
+              <Ionicons
+                name="play-circle"
+                size={72}
+                color="rgba(255,255,255,0.9)"
+              />
+            </TouchableOpacity>
+          )}
+
 
           {/* Subtitle Overlay */}
           {subtitlesEnabled && currentSubtitle !== '' && (

@@ -473,7 +473,7 @@ const ManageClassesScreen: React.FC<Props> = ({ navigation }) => {
           studentCount > 0 ||
           subjectCount > 0
         ) {
-          const details = [];
+          const details: string[] = [];
 
           if (studentCount > 0) {
             details.push(

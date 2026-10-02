@@ -29,7 +29,9 @@ export type RootStackParamList = {
 
   VideoPlayer: {
     subjectId: number;
+    videoId?: number;
   };
+
 
   PdfViewer: {
     subjectId: number;
@@ -237,7 +239,9 @@ export type LearningStackParamList = {
 
   VideoPlayer: {
     subjectId: number;
+    videoId?: number;
   };
+
 
   PdfViewer: {
     subjectId: number;

@@ -77,6 +77,7 @@ export const schema: string[] = [
     thumbnail_url TEXT,
     subtitle_url TEXT,
     video_duration INTEGER,
+    medium TEXT DEFAULT 'both',
     sort_order INTEGER DEFAULT 1,
     is_active BOOLEAN DEFAULT 1,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,

@@ -1,5 +1,8 @@
 import { executeQuery } from '../database';
 import { classesData } from '../../data/classes';
+import { textbookPdfs } from './textbookPdfsData';
+import { textbookVideos } from './textbookVideosData';
+
 
 const simpleHash = async (
   password: string,
@@ -143,6 +146,16 @@ export const seedDatabase = async () => {
         name_english: 'Geography',
         name_marathi: 'भूगोल',
         icon: '🌍',
+      },
+      {
+        name_english: 'Environmental Studies',
+        name_marathi: 'परिसर अभ्यास',
+        icon: '🌱',
+      },
+      {
+        name_english: 'Play, Do, Learn',
+        name_marathi: 'खेळू, करू, शिकू',
+        icon: '🎨',
       },
     ];
 
@@ -598,9 +611,180 @@ export const seedDatabase = async () => {
       );
     }
 
+    // -----------------------------------------
+    // 9. SEED MAHARASHTRA BOARD TEXTBOOK PDFS
+    // -----------------------------------------
+    console.log('Seeding Maharashtra Board textbook PDFs...');
+
+    for (const book of textbookPdfs) {
+      const classRows = await executeQuery(
+        `SELECT id FROM classes WHERE class_number = ? LIMIT 1`,
+        [book.classNumber]
+      );
+      if (!classRows || classRows.length === 0) continue;
+      const classId = classRows[0].id;
+
+      // Find or create subject for this class
+      let subjectRows = await executeQuery(
+        `SELECT id FROM subjects WHERE class_id = ? AND LOWER(name_english) = LOWER(?) LIMIT 1`,
+        [classId, book.subjectEnglish]
+      );
+
+      let subjectId: number;
+      if (!subjectRows || subjectRows.length === 0) {
+        await executeQuery(
+          `INSERT INTO subjects (class_id, name_english, name_marathi, icon, is_active)
+           VALUES (?, ?, ?, '📚', 1)`,
+          [classId, book.subjectEnglish, book.subjectMarathi]
+        );
+        subjectRows = await executeQuery(
+          `SELECT id FROM subjects WHERE class_id = ? AND LOWER(name_english) = LOWER(?) LIMIT 1`,
+          [classId, book.subjectEnglish]
+        );
+      }
+      subjectId = subjectRows[0].id;
+
+      const pdfUrl = `file:///E:/SoftspireSolution/Document/ssc book content/${book.relativePath}`;
+
+      const existingPdf = await executeQuery(
+        `SELECT id FROM pdfs WHERE subject_id = ? AND (title_english = ? OR pdf_url = ?) LIMIT 1`,
+        [subjectId, book.titleEnglish, pdfUrl]
+      );
+
+      if (!existingPdf || existingPdf.length === 0) {
+        await executeQuery(
+          `INSERT INTO pdfs (
+            subject_id,
+            title_english,
+            title_marathi,
+            description_english,
+            description_marathi,
+            pdf_url,
+            medium,
+            sort_order,
+            is_active
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1)`,
+          [
+            subjectId,
+            book.titleEnglish,
+            book.titleMarathi,
+            book.descriptionEnglish,
+            book.descriptionMarathi,
+            pdfUrl,
+            book.medium,
+          ]
+        );
+      } else {
+        await executeQuery(
+          `UPDATE pdfs 
+           SET title_english = ?, title_marathi = ?, description_english = ?, description_marathi = ?, pdf_url = ?, medium = ?, is_active = 1
+           WHERE id = ?`,
+          [
+            book.titleEnglish,
+            book.titleMarathi,
+            book.descriptionEnglish,
+            book.descriptionMarathi,
+            pdfUrl,
+            book.medium,
+            existingPdf[0].id,
+          ]
+        );
+      }
+    }
+
     console.log(
-      'Database seeded successfully ✅',
+      'Maharashtra Board textbook PDFs seeded successfully',
     );
+
+    // -----------------------------------------
+    // 10. SEED MAHARASHTRA BOARD VIDEOS
+    // -----------------------------------------
+    console.log('Seeding Maharashtra Board textbook videos...');
+
+    for (const vid of textbookVideos) {
+      const classRows = await executeQuery(
+        `SELECT id FROM classes WHERE class_number = ? LIMIT 1`,
+        [vid.classNumber]
+      );
+      if (!classRows || classRows.length === 0) continue;
+      const classId = classRows[0].id;
+
+      // Find or create subject for this class
+      let subjectRows = await executeQuery(
+        `SELECT id FROM subjects WHERE class_id = ? AND LOWER(name_english) = LOWER(?) LIMIT 1`,
+        [classId, vid.subjectEnglish]
+      );
+
+      let subjectId: number;
+      if (!subjectRows || subjectRows.length === 0) {
+        await executeQuery(
+          `INSERT INTO subjects (class_id, name_english, name_marathi, icon, is_active)
+           VALUES (?, ?, ?, '📚', 1)`,
+          [classId, vid.subjectEnglish, vid.subjectMarathi]
+        );
+        subjectRows = await executeQuery(
+          `SELECT id FROM subjects WHERE class_id = ? AND LOWER(name_english) = LOWER(?) LIMIT 1`,
+          [classId, vid.subjectEnglish]
+        );
+      }
+      subjectId = subjectRows[0].id;
+
+      const existingVideo = await executeQuery(
+        `SELECT id FROM videos WHERE subject_id = ? AND (title_english = ? OR video_url = ?) LIMIT 1`,
+        [subjectId, vid.titleEnglish, vid.videoUrl]
+      );
+
+      if (!existingVideo || existingVideo.length === 0) {
+        await executeQuery(
+          `INSERT INTO videos (
+            subject_id,
+            title_english,
+            title_marathi,
+            description_english,
+            description_marathi,
+            video_url,
+            medium,
+            sort_order,
+            is_active
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+          [
+            subjectId,
+            vid.titleEnglish,
+            vid.titleMarathi,
+            vid.descriptionEnglish,
+            vid.descriptionMarathi,
+            vid.videoUrl,
+            vid.medium,
+            vid.sortOrder,
+          ]
+        );
+      } else {
+        await executeQuery(
+          `UPDATE videos
+           SET title_english = ?, title_marathi = ?, description_english = ?, description_marathi = ?, video_url = ?, medium = ?, sort_order = ?, is_active = 1
+           WHERE id = ?`,
+          [
+            vid.titleEnglish,
+            vid.titleMarathi,
+            vid.descriptionEnglish,
+            vid.descriptionMarathi,
+            vid.videoUrl,
+            vid.medium,
+            vid.sortOrder,
+            existingVideo[0].id,
+          ]
+        );
+      }
+    }
+
+    console.log(
+      'Maharashtra Board textbook videos seeded successfully',
+    );
+
+    console.log(
+      'Database seeded successfully',
+    );
+
   } catch (error) {
     console.error(
       'Error seeding database:',

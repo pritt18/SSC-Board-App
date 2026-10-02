@@ -339,6 +339,23 @@ const ManagePdfsScreen: React.FC<Props> = ({ navigation }) => {
 
               <View style={styles.cardActions}>
                 <TouchableOpacity
+                  style={[styles.actionButton, styles.viewButton]}
+                  onPress={() => {
+                    if (!pdf.pdf_url) {
+                      showAlert('Not Available', 'PDF file path is missing.');
+                      return;
+                    }
+                    navigation.navigate('PdfDisplay', {
+                      pdfId: pdf.id,
+                      pdfUrl: pdf.pdf_url,
+                      title: pdf.title,
+                    });
+                  }}
+                >
+                  <Ionicons name="book-outline" size={16} color="#4F46E5" />
+                  <Text style={styles.viewButtonText}>View</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
                   style={[styles.actionButton, styles.editButton]}
                   onPress={() => navigation.navigate('EditPdf', { pdfId: pdf.id })}
                 >
@@ -685,6 +702,14 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     flex: 1,
     justifyContent: 'center',
+  },
+  viewButton: {
+    backgroundColor: '#EEF2FF',
+  },
+  viewButtonText: {
+    fontSize: 12,
+    color: '#4F46E5',
+    fontWeight: '600',
   },
   editButton: {
     backgroundColor: '#EEF2FF',

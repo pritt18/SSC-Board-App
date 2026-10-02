@@ -240,6 +240,11 @@ export const migrations: string[] = [
   `ALTER TABLE pdfs ADD COLUMN medium TEXT DEFAULT 'both'`,
   `CREATE INDEX IF NOT EXISTS idx_pdfs_medium ON pdfs(medium)`,
 
+  // Defensive: ensure medium exists on videos
+  `ALTER TABLE videos ADD COLUMN medium TEXT DEFAULT 'both'`,
+  `CREATE INDEX IF NOT EXISTS idx_videos_medium ON videos(medium)`,
+
+
   // ============================================
   // DEFENSIVE / SELF-HEALING COLUMN CHECKS
   // ============================================

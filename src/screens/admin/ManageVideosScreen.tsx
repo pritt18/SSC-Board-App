@@ -286,12 +286,20 @@ const ManageVideosScreen: React.FC<Props> = ({ navigation }) => {
 
               <View style={styles.cardActions}>
                 <TouchableOpacity
+                  style={[styles.actionButton, styles.viewButton]}
+                  onPress={() => navigation.navigate('VideoPlayer', { subjectId: video.subject_id, videoId: video.id })}
+                >
+                  <Ionicons name="play-outline" size={16} color={COLORS.primary} />
+                  <Text style={[styles.editButtonText, { color: COLORS.primary }]}>View</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
                   style={[styles.actionButton, styles.editButton]}
                   onPress={() => navigation.navigate('EditVideo', { videoId: video.id })}
                 >
                   <Ionicons name="create-outline" size={16} color="#2563EB" />
                   <Text style={styles.editButtonText}>Edit</Text>
                 </TouchableOpacity>
+
                 <TouchableOpacity
                   style={[styles.actionButton, styles.toggleButton]}
                   onPress={() => handleToggleActive(video.id, video.isActive)}
@@ -575,9 +583,13 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
   },
+  viewButton: {
+    backgroundColor: '#EFF6FF',
+  },
   editButton: {
     backgroundColor: '#EEF2FF',
   },
+
   editButtonText: {
     fontSize: 12,
     color: '#2563EB',
