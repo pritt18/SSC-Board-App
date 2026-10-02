@@ -12,82 +12,209 @@ import { LearningStackParamList } from '../../navigation/navigationTypes';
 
 type Props = NativeStackScreenProps<LearningStackParamList, 'PdfDisplay'>;
 
-// -----------------------------------------------------------------
-// Fully OFFLINE, memory-efficient in-app PDF viewer.
-//
-// IMPORTANT: unlike a naive approach, this does NOT read the whole
-// PDF into memory as a base64 string and pass it through the React
-// Native bridge. That works for small files but can crash on large
-// PDFs (base64 inflates size ~33%, then it gets duplicated across
-// JS memory + the RN bridge + the WebView's own memory).
-//
-// Instead:
-//  1. The pdf.js viewer HTML (with the library bundled inline, no
-//     network) is written to disk ONCE and reused for every PDF.
-//  2. The WebView loads that HTML *from disk* via a file:// URI
-//     (source={{uri}}), not via source={{html}} — so the ~1.4MB
-//     pdf.js payload never goes through the bridge either.
-//  3. The target PDF's own file:// path is handed to pdf.js, which
-//     reads/renders it directly, page by page, from disk.
-//
-// This keeps peak memory roughly proportional to "one page at a
-// time" rather than "the entire file", so it scales far better to
-// large PDFs and to opening many PDFs across a session.
-//
-// There is deliberately NO share/download button anywhere on this
-// screen, and long-press / text-selection / right-click are
-// disabled in the page itself. Screenshots are additionally blocked
-// while this screen is open (Android only — iOS has no public API
-// to block screenshots, only to detect them).
-// -----------------------------------------------------------------
-
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const PDFJS_LIB_ASSET = require('../../../assets/pdfjs/pdf.min.js.txt');
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const PDFJS_WORKER_ASSET = require('../../../assets/pdfjs/pdf.worker.min.js.txt');
 
-const VIEWER_HTML_PATH = FileSystem.documentDirectory + 'pdf_viewer.html';
+// Upgraded versioned path to ensure cache refresh
+const VIEWER_HTML_PATH = FileSystem.documentDirectory + 'pdf_book_viewer_v2.html';
 
 const buildViewerHtml = (pdfJsSource: string, pdfWorkerSource: string) => `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.5, user-scalable=yes" />
   <style>
     * {
       -webkit-touch-callout: none;
       -webkit-user-select: none;
       user-select: none;
+      box-sizing: border-box;
     }
     html, body {
       margin: 0;
       padding: 0;
-      background: #525659;
-      overflow-x: hidden;
+      width: 100%;
+      height: 100%;
+      background: #1e293b;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
-    #pages {
+    #viewer-root {
       display: flex;
       flex-direction: column;
+      height: 100%;
+      width: 100%;
+    }
+    #top-bar {
+      height: 44px;
+      background: #0f172a;
+      display: flex;
       align-items: center;
-      padding: 10px 0 40px;
+      justify-content: space-between;
+      padding: 0 16px;
+      color: #e2e8f0;
+      font-size: 13px;
+      font-weight: 600;
+      border-bottom: 1px solid #334155;
+      z-index: 50;
+    }
+    #book-viewport {
+      flex: 1;
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: auto;
+      background: #334155;
+      padding: 12px;
+    }
+    #page-card {
+      position: relative;
+      background: #ffffff;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.2);
+      border-radius: 4px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s ease;
     }
     canvas {
-      margin-bottom: 10px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      display: block;
       max-width: 100%;
       height: auto;
+      border-radius: 4px;
     }
-    #status {
+    .side-nav-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 44px;
+      height: 52px;
+      background: rgba(15, 23, 42, 0.75);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      cursor: pointer;
+      z-index: 40;
+    }
+    .side-nav-left { left: 8px; }
+    .side-nav-right { right: 8px; }
+    .side-nav-btn:disabled, .side-nav-btn.disabled {
+      opacity: 0.2;
+      pointer-events: none;
+    }
+    #bottom-bar {
+      height: 56px;
+      background: #0f172a;
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      padding: 0 8px;
+      border-top: 1px solid #334155;
       color: white;
-      font-family: sans-serif;
+      z-index: 50;
+    }
+    .bar-btn {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #ffffff;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .bar-btn-primary {
+      background: #2563eb;
+      border-color: #3b82f6;
+    }
+    .bar-btn:active { opacity: 0.7; }
+    .bar-btn:disabled {
+      opacity: 0.3;
+      pointer-events: none;
+    }
+    #page-counter {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 13px;
+      color: #cbd5e1;
+    }
+    #page-input {
+      width: 44px;
+      height: 28px;
+      background: #1e293b;
+      border: 1px solid #475569;
+      color: #ffffff;
+      border-radius: 4px;
       text-align: center;
-      padding: 40px 20px;
+      font-size: 13px;
+      font-weight: bold;
+    }
+    #status-overlay {
+      color: #ffffff;
+      font-size: 15px;
+      text-align: center;
+      padding: 30px;
+    }
+    .flip-next {
+      animation: animFlipNext 0.22s ease-out;
+    }
+    .flip-prev {
+      animation: animFlipPrev 0.22s ease-out;
+    }
+    @keyframes animFlipNext {
+      0% { opacity: 0.4; transform: translateX(30px) scale(0.98); }
+      100% { opacity: 1; transform: translateX(0) scale(1); }
+    }
+    @keyframes animFlipPrev {
+      0% { opacity: 0.4; transform: translateX(-30px) scale(0.98); }
+      100% { opacity: 1; transform: translateX(0) scale(1); }
     }
   </style>
 </head>
 <body oncontextmenu="return false">
-  <div id="pages"><div id="status">Loading PDF...</div></div>
+  <div id="viewer-root">
+    <div id="top-bar">
+      <span id="title-display">पुस्तकाचे पान (Book Reader)</span>
+      <span id="zoom-controls">
+        <button id="btn-zoom-out" class="bar-btn" style="padding:4px 8px;">−</button>
+        <span id="zoom-val" style="padding:0 6px;">100%</span>
+        <button id="btn-zoom-in" class="bar-btn" style="padding:4px 8px;">+</button>
+      </span>
+    </div>
+
+    <div id="book-viewport">
+      <button id="side-prev" class="side-nav-btn side-nav-left">‹</button>
+      <div id="page-card">
+        <div id="status-overlay">पुस्तक लोड होत आहे...</div>
+        <canvas id="pdf-canvas" style="display:none;"></canvas>
+      </div>
+      <button id="side-next" class="side-nav-btn side-nav-right">›</button>
+    </div>
+
+    <div id="bottom-bar">
+      <button id="btn-first" class="bar-btn">⏮</button>
+      <button id="btn-prev" class="bar-btn">‹ मागील</button>
+      <div id="page-counter">
+        <span>पान</span>
+        <input id="page-input" type="number" min="1" value="1" />
+        <span id="page-total">/ 0</span>
+      </div>
+      <button id="btn-next" class="bar-btn bar-btn-primary">पुढील ›</button>
+      <button id="btn-last" class="bar-btn">⏭</button>
+    </div>
+  </div>
 
   <script>
   ${pdfJsSource}
@@ -100,35 +227,166 @@ const buildViewerHtml = (pdfJsSource: string, pdfWorkerSource: string) => `
       pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(blob);
     })();
 
-    // Renders pages one at a time and discards each page object right
-    // after drawing it, instead of holding the whole document's pages
-    // in memory at once.
-    async function renderPdf(pdfFileUri) {
-      const container = document.getElementById('pages');
-      try {
-        const pdf = await pdfjsLib.getDocument({ url: pdfFileUri }).promise;
-        container.innerHTML = '';
+    var pdfDoc = null;
+    var currentPage = 1;
+    var totalPages = 0;
+    var scale = 1.35;
+    var isRendering = false;
+    var activeRenderTask = null;
 
-        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-          const page = await pdf.getPage(pageNum);
-          const viewport = page.getViewport({ scale: 1.5 });
-          const canvas = document.createElement('canvas');
-          canvas.width = viewport.width;
-          canvas.height = viewport.height;
-          container.appendChild(canvas);
-          const ctx = canvas.getContext('2d');
-          await page.render({ canvasContext: ctx, viewport }).promise;
-          page.cleanup();
+    var canvas = document.getElementById('pdf-canvas');
+    var ctx = canvas.getContext('2d');
+    var pageCard = document.getElementById('page-card');
+    var statusEl = document.getElementById('status-overlay');
+    var pageInput = document.getElementById('page-input');
+    var pageTotal = document.getElementById('page-total');
+    var zoomVal = document.getElementById('zoom-val');
+
+    var btnPrev = document.getElementById('btn-prev');
+    var btnNext = document.getElementById('btn-next');
+    var sidePrev = document.getElementById('side-prev');
+    var sideNext = document.getElementById('side-next');
+    var btnFirst = document.getElementById('btn-first');
+    var btnLast = document.getElementById('btn-last');
+
+    function updateNavState() {
+      pageInput.value = currentPage;
+      pageTotal.textContent = '/ ' + totalPages;
+      zoomVal.textContent = Math.round(scale * 100) + '%';
+
+      var atStart = currentPage <= 1;
+      var atEnd = currentPage >= totalPages;
+
+      btnPrev.disabled = atStart;
+      sidePrev.disabled = atStart;
+      btnFirst.disabled = atStart;
+
+      btnNext.disabled = atEnd;
+      sideNext.disabled = atEnd;
+      btnLast.disabled = atEnd;
+    }
+
+    async function renderPage(num, direction) {
+      if (!pdfDoc || isRendering) return;
+      isRendering = true;
+
+      if (activeRenderTask) {
+        try { activeRenderTask.cancel(); } catch(e){}
+      }
+
+      statusEl.style.display = 'block';
+      statusEl.textContent = 'पान ' + num + ' लोड होत आहे...';
+      canvas.style.display = 'none';
+
+      try {
+        var page = await pdfDoc.getPage(num);
+        var dpr = window.devicePixelRatio || 1;
+        var viewport = page.getViewport({ scale: scale });
+
+        canvas.width = Math.floor(viewport.width * dpr);
+        canvas.height = Math.floor(viewport.height * dpr);
+        canvas.style.width = Math.floor(viewport.width) + 'px';
+        canvas.style.height = Math.floor(viewport.height) + 'px';
+
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        var renderTask = page.render({ canvasContext: ctx, viewport: viewport });
+        activeRenderTask = renderTask;
+        await renderTask.promise;
+
+        statusEl.style.display = 'none';
+        canvas.style.display = 'block';
+
+        if (direction === 'next') {
+          pageCard.classList.remove('flip-prev', 'flip-next');
+          void pageCard.offsetWidth;
+          pageCard.classList.add('flip-next');
+        } else if (direction === 'prev') {
+          pageCard.classList.remove('flip-prev', 'flip-next');
+          void pageCard.offsetWidth;
+          pageCard.classList.add('flip-prev');
         }
+
+        page.cleanup();
       } catch (err) {
-        container.innerHTML = '<div id="status">Could not display this PDF.<br/>' + (err && err.message ? err.message : '') + '</div>';
+        if (err && err.name !== 'RenderingCancelledException') {
+          statusEl.textContent = 'पान लोड करण्यात अडचण आली: ' + (err.message || '');
+          statusEl.style.display = 'block';
+        }
+      } finally {
+        isRendering = false;
+        activeRenderTask = null;
+        updateNavState();
       }
     }
 
-    // The actual PDF path is injected right before this script runs
-    // (see injectedJavaScriptBeforeContentLoaded on the RN side).
+    function goToPage(target, dir) {
+      if (!pdfDoc || totalPages === 0) return;
+      var num = Math.max(1, Math.min(target, totalPages));
+      if (num === currentPage && !dir) return;
+      currentPage = num;
+      renderPage(currentPage, dir);
+    }
+
+    function goPrev() { if (currentPage > 1) goToPage(currentPage - 1, 'prev'); }
+    function goNext() { if (currentPage < totalPages) goToPage(currentPage + 1, 'next'); }
+
+    btnPrev.onclick = goPrev;
+    sidePrev.onclick = goPrev;
+    btnNext.onclick = goNext;
+    sideNext.onclick = goNext;
+    btnFirst.onclick = function() { goToPage(1, 'prev'); };
+    btnLast.onclick = function() { goToPage(totalPages, 'next'); };
+
+    pageInput.onchange = function() {
+      var n = parseInt(pageInput.value, 10);
+      if (!isNaN(n)) goToPage(n);
+    };
+
+    document.getElementById('btn-zoom-in').onclick = function() {
+      if (scale < 2.5) { scale += 0.2; renderPage(currentPage); }
+    };
+    document.getElementById('btn-zoom-out').onclick = function() {
+      if (scale > 0.8) { scale -= 0.2; renderPage(currentPage); }
+    };
+
+    // Touch Swipe Detection (Finger swipe to turn page like a real book)
+    var touchStartX = 0;
+    var touchStartY = 0;
+    var viewportEl = document.getElementById('book-viewport');
+
+    viewportEl.addEventListener('touchstart', function(e) {
+      if (e.touches.length === 1) {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+      }
+    }, { passive: true });
+
+    viewportEl.addEventListener('touchend', function(e) {
+      if (e.changedTouches.length === 1) {
+        var diffX = e.changedTouches[0].clientX - touchStartX;
+        var diffY = e.changedTouches[0].clientY - touchStartY;
+        if (Math.abs(diffX) > 45 && Math.abs(diffX) > Math.abs(diffY) * 1.4) {
+          if (diffX < 0) { goNext(); } else { goPrev(); }
+        }
+      }
+    }, { passive: true });
+
+    async function initPdf(fileUri) {
+      try {
+        statusEl.textContent = 'पुस्तक उघडत आहे...';
+        pdfDoc = await pdfjsLib.getDocument({ url: fileUri }).promise;
+        totalPages = pdfDoc.numPages;
+        currentPage = 1;
+        updateNavState();
+        renderPage(1);
+      } catch (err) {
+        statusEl.textContent = 'पुस्तक उघडता आले नाही: ' + (err ? err.message : '');
+      }
+    }
+
     if (window.__PDF_FILE_URI__) {
-      renderPdf(window.__PDF_FILE_URI__);
+      initPdf(window.__PDF_FILE_URI__);
     }
   </script>
 </body>
@@ -158,9 +416,6 @@ const PdfDisplayScreen: React.FC<Props> = ({ route, navigation }) => {
       try {
         setLoading(true);
 
-        // Write the shared viewer HTML to disk once and reuse it for
-        // every PDF — avoids re-embedding the 1.4MB pdf.js payload
-        // through the bridge on every open.
         const alreadyBuilt = await FileSystem.getInfoAsync(VIEWER_HTML_PATH);
         if (!alreadyBuilt.exists) {
           const [pdfJsAsset, pdfWorkerAsset] = await Asset.loadAsync([
@@ -192,9 +447,6 @@ const PdfDisplayScreen: React.FC<Props> = ({ route, navigation }) => {
     prepare();
   }, [pdfUrl]);
 
-  // Runs inside the WebView right before its own <script> tags run —
-  // hands the target PDF's file path to the page without ever routing
-  // the PDF's *contents* through React Native.
   const injectedJavaScriptBeforeContentLoaded = `
     window.__PDF_FILE_URI__ = ${JSON.stringify(pdfUrl)};
     true;
@@ -206,13 +458,15 @@ const PdfDisplayScreen: React.FC<Props> = ({ route, navigation }) => {
         <Pressable style={styles.backButton} onPress={() => navigation.goBack()}>
           <Text style={styles.backText}>‹</Text>
         </Pressable>
-        <Text style={styles.title} numberOfLines={1}>{title || 'PDF Document'}</Text>
+        <Text style={styles.title} numberOfLines={1}>
+          {title || 'PDF Document'}
+        </Text>
       </View>
 
       {loading ? (
         <View style={styles.centerBox}>
           <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.statusText}>Preparing PDF viewer...</Text>
+          <Text style={styles.statusText}>Preparing Book Reader...</Text>
         </View>
       ) : error || !viewerReady ? (
         <View style={styles.centerBox}>
@@ -228,7 +482,7 @@ const PdfDisplayScreen: React.FC<Props> = ({ route, navigation }) => {
           originWhitelist={['*']}
           source={{ uri: VIEWER_HTML_PATH }}
           injectedJavaScriptBeforeContentLoaded={injectedJavaScriptBeforeContentLoaded}
-          style={{ flex: 1, backgroundColor: '#525659' }}
+          style={{ flex: 1, backgroundColor: '#1e293b' }}
           javaScriptEnabled
           domStorageEnabled
           allowFileAccess
@@ -245,29 +499,37 @@ const PdfDisplayScreen: React.FC<Props> = ({ route, navigation }) => {
 export default PdfDisplayScreen;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.white },
+  container: { flex: 1, backgroundColor: '#0F172A' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 15,
+    padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    backgroundColor: COLORS.white,
+    borderBottomColor: '#334155',
+    backgroundColor: '#0F172A',
   },
-  backButton: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center', marginRight: 10 },
-  backText: { fontSize: 32, color: COLORS.textPrimary, marginTop: -4 },
-  title: { fontSize: 16, fontWeight: '700', color: COLORS.textPrimary, flex: 1 },
+  backButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 8,
+    backgroundColor: '#1E293B',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  backText: { fontSize: 26, color: '#F8FAFC', marginTop: -3 },
+  title: { fontSize: 16, fontWeight: '700', color: '#F8FAFC', flex: 1 },
   centerBox: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 30,
-    backgroundColor: COLORS.background,
+    backgroundColor: '#0F172A',
   },
-  statusText: { marginTop: 14, color: COLORS.textSecondary, fontSize: 14 },
+  statusText: { marginTop: 14, color: '#94A3B8', fontSize: 14 },
   errorIcon: { fontSize: 50, marginBottom: 16 },
-  errorTitle: { fontSize: 18, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 8 },
-  errorText: { fontSize: 13, color: COLORS.textSecondary, textAlign: 'center', marginBottom: 20, lineHeight: 19 },
-  retryButton: { backgroundColor: COLORS.primary, paddingHorizontal: 30, paddingVertical: 12, borderRadius: 10 },
+  errorTitle: { fontSize: 18, fontWeight: '700', color: '#F8FAFC', marginBottom: 8 },
+  errorText: { fontSize: 13, color: '#94A3B8', textAlign: 'center', marginBottom: 20, lineHeight: 19 },
+  retryButton: { backgroundColor: '#2563EB', paddingHorizontal: 30, paddingVertical: 12, borderRadius: 10 },
   retryButtonText: { color: COLORS.white, fontWeight: '600' },
 });
