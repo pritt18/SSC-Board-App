@@ -71,7 +71,11 @@ const AddQuizScreen: React.FC<Props> = ({ navigation }) => {
       );
       setSubjects(results as Subject[]);
     } catch (error) {
-      console.error('Error loading subjects:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('Error loading subjects:', {
+        error: errorMessage,
+        platform: typeof window !== 'undefined' ? 'web' : 'native'
+      });
     }
   };
 
@@ -216,8 +220,12 @@ const handleAddQuiz = async () => {
     navigation.goBack();
 
   } catch (error) {
-    console.error('Error adding quiz:', error);
-    Alert.alert('Error', 'Failed to add quiz');
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('Error adding quiz:', {
+      error: errorMessage,
+      platform: typeof window !== 'undefined' ? 'web' : 'native'
+    });
+    Alert.alert('Error', `Failed to add quiz: ${errorMessage}`);
   } finally {
     setLoading(false);
   }

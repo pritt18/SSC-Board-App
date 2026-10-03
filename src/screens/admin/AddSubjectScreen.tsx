@@ -59,8 +59,13 @@ const AddSubjectScreen: React.FC<Props> = ({ navigation, route }) => {
         { text: 'OK', onPress: () => navigation.goBack() }
       ]);
     } catch (error) {
-      console.error('Error adding subject:', error);
-      Alert.alert('Error', 'Failed to add subject');
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('Error adding subject:', {
+        error: errorMessage,
+        classId,
+        platform: typeof window !== 'undefined' ? 'web' : 'native'
+      });
+      Alert.alert('Error', `Failed to add subject: ${errorMessage}`);
     } finally {
       setLoading(false);
     }

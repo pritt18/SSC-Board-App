@@ -115,11 +115,15 @@ const AddVideoScreen: React.FC<Props> = ({ navigation }) => {
 
       setSubjects(results as Subject[]);
     } catch (error) {
-      console.error('Error loading subjects:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('Error loading subjects:', {
+        error: errorMessage,
+        platform: typeof window !== 'undefined' ? 'web' : 'native'
+      });
 
       showAlert(
         'Error',
-        'Failed to load subjects. Please try again.'
+        `Failed to load subjects: ${errorMessage}`
       );
     } finally {
       setLoadingSubjects(false);
@@ -147,7 +151,12 @@ const AddVideoScreen: React.FC<Props> = ({ navigation }) => {
 
       setChapters(results as Chapter[]);
     } catch (error) {
-      console.error('Error loading chapters:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('Error loading chapters:', {
+        error: errorMessage,
+        subjectId,
+        platform: typeof window !== 'undefined' ? 'web' : 'native'
+      });
       setChapters([]);
     }
   };
@@ -316,15 +325,19 @@ const AddVideoScreen: React.FC<Props> = ({ navigation }) => {
 
       navigation.goBack();
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       console.error(
         'Error adding video:',
-        error
+        {
+          error: errorMessage,
+          subjectId,
+          platform: typeof window !== 'undefined' ? 'web' : 'native'
+        }
       );
 
       showAlert(
         'Error',
-        'Failed to add video. ' +
-          ((error as any)?.message || '')
+        `Failed to add video: ${errorMessage}`
       );
     } finally {
       setIsUploading(false);

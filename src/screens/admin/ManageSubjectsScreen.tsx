@@ -82,14 +82,19 @@ const ManageSubjectsScreen: React.FC<Props> = ({
 
       setSubjects(items as SubjectItem[]);
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       console.error(
         'Error loading subjects:',
-        error
+        {
+          error: errorMessage,
+          classId,
+          platform: typeof window !== 'undefined' ? 'web' : 'native'
+        }
       );
 
       showMessage(
         'Error',
-        'Failed to load subjects.'
+        `Failed to load subjects: ${errorMessage}`
       );
     } finally {
       setLoading(false);
@@ -221,14 +226,20 @@ const ManageSubjectsScreen: React.FC<Props> = ({
           } successfully.`
         );
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
         console.error(
           'Error updating subject status:',
-          error
+          {
+            error: errorMessage,
+            id,
+            currentStatus,
+            platform: typeof window !== 'undefined' ? 'web' : 'native'
+          }
         );
 
         showMessage(
           'Error',
-          'Failed to update subject status.'
+          `Failed to update subject status: ${errorMessage}`
         );
       }
     };

@@ -101,8 +101,14 @@ const ManagePdfsScreen: React.FC<Props> = ({ navigation }) => {
       setPdfs(items as PdfItem[]);
       setFilteredPdfs(items as PdfItem[]);
     } catch (error) {
-      console.error('Error loading PDFs:', error);
-      showAlert('Error', 'Failed to load PDFs');
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('Error loading PDFs:', {
+        error: errorMessage,
+        selectedClass,
+        selectedMedium,
+        platform: typeof window !== 'undefined' ? 'web' : 'native'
+      });
+      showAlert('Error', `Failed to load PDFs: ${errorMessage}`);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -117,7 +123,11 @@ const ManagePdfsScreen: React.FC<Props> = ({ navigation }) => {
       );
       setClasses(classData as { id: number; name: string }[]);
     } catch (error) {
-      console.error('Error loading classes:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('Error loading classes:', {
+        error: errorMessage,
+        platform: typeof window !== 'undefined' ? 'web' : 'native'
+      });
     }
   };
 
@@ -164,7 +174,13 @@ const ManagePdfsScreen: React.FC<Props> = ({ navigation }) => {
           loadPdfs();
           showAlert('Success', `PDF ${currentStatus ? 'deactivated' : 'activated'}`);
         } catch (error) {
-          showAlert('Error', 'Failed to update PDF status');
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          console.error('Error updating PDF status:', {
+            error: errorMessage,
+            pdfId: id,
+            platform: typeof window !== 'undefined' ? 'web' : 'native'
+          });
+          showAlert('Error', `Failed to update PDF status: ${errorMessage}`);
         }
       },
       'Confirm',
@@ -185,7 +201,13 @@ const ManagePdfsScreen: React.FC<Props> = ({ navigation }) => {
           loadPdfs();
           showAlert('Success', 'PDF deleted successfully');
         } catch (error) {
-          showAlert('Error', 'Failed to delete PDF');
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          console.error('Error deleting PDF:', {
+            error: errorMessage,
+            pdfId: id,
+            platform: typeof window !== 'undefined' ? 'web' : 'native'
+          });
+          showAlert('Error', `Failed to delete PDF: ${errorMessage}`);
         }
       },
       'Delete',

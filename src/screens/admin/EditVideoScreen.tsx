@@ -101,7 +101,13 @@ const EditVideoScreen: React.FC<Props> = ({ navigation, route }) => {
         navigation.goBack();
       }
     } catch (error) {
-      showAlert('Error', 'Failed to load video');
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('Error loading video:', {
+        error: errorMessage,
+        videoId,
+        platform: typeof window !== 'undefined' ? 'web' : 'native'
+      });
+      showAlert('Error', `Failed to load video: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -123,7 +129,11 @@ const EditVideoScreen: React.FC<Props> = ({ navigation, route }) => {
       );
       setSubjects(results as Subject[]);
     } catch (error) {
-      console.error('Error loading subjects:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('Error loading subjects:', {
+        error: errorMessage,
+        platform: typeof window !== 'undefined' ? 'web' : 'native'
+      });
     }
   };
 
@@ -138,7 +148,12 @@ const EditVideoScreen: React.FC<Props> = ({ navigation, route }) => {
       );
       setChapters(results as Chapter[]);
     } catch (error) {
-      console.error('Error loading chapters:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('Error loading chapters:', {
+        error: errorMessage,
+        subjectId,
+        platform: typeof window !== 'undefined' ? 'web' : 'native'
+      });
     }
   };
 
@@ -175,8 +190,13 @@ const EditVideoScreen: React.FC<Props> = ({ navigation, route }) => {
       showAlert('Success', 'Video updated successfully');
       navigation.goBack();
     } catch (error) {
-      console.error('Error updating video:', error);
-      showAlert('Error', 'Failed to update video');
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('Error updating video:', {
+        error: errorMessage,
+        videoId,
+        platform: typeof window !== 'undefined' ? 'web' : 'native'
+      });
+      showAlert('Error', `Failed to update video: ${errorMessage}`);
     } finally {
       setSaving(false);
     }

@@ -86,6 +86,12 @@ export const executeQuery = async (
   params: any[] = []
 ): Promise<any[]> => {
   try {
+    // Ensure database is initialized before executing queries
+    if (!isInitialized) {
+      console.warn('Database not initialized, initializing now...');
+      await initializeDatabase();
+    }
+
     const database = await getDatabase();
 
     const sql = query.trim().toLowerCase();
@@ -119,10 +125,27 @@ export const executeQuery = async (
 
     return [];
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const platformInfo = typeof window !== 'undefined' ? 'web' : 'native';
+    
     console.error(
       'Query execution error:',
-      error
+      {
+        query,
+        params,
+        error: errorMessage,
+        platform: platformInfo,
+        isInitialized
+      }
     );
+
+    // Provide more context for web platform
+    if (platformInfo === 'web' && errorMessage.includes('no such table')) {
+      throw new Error(
+        `Database table missing on web platform. This may indicate the database initialization failed. ` +
+        `Please refresh the page or try the native app. Original error: ${errorMessage}`
+      );
+    }
 
     throw error;
   }

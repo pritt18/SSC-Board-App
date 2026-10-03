@@ -137,7 +137,13 @@ const EditQuizScreen: React.FC<Props> = ({ navigation, route }) => {
       })));
 
     } catch (error) {
-      Alert.alert('Error', 'Failed to load quiz');
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('Error loading quiz:', {
+        error: errorMessage,
+        quizId,
+        platform: typeof window !== 'undefined' ? 'web' : 'native'
+      });
+      Alert.alert('Error', `Failed to load quiz: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -158,7 +164,11 @@ const EditQuizScreen: React.FC<Props> = ({ navigation, route }) => {
       );
       setSubjects(results as Subject[]);
     } catch (error) {
-      console.error('Error loading subjects:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('Error loading subjects:', {
+        error: errorMessage,
+        platform: typeof window !== 'undefined' ? 'web' : 'native'
+      });
     }
   };
 
@@ -280,8 +290,13 @@ const EditQuizScreen: React.FC<Props> = ({ navigation, route }) => {
         { text: 'OK', onPress: () => navigation.goBack() }
       ]);
     } catch (error) {
-      console.error('Error updating quiz:', error);
-      Alert.alert('Error', 'Failed to update quiz');
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('Error updating quiz:', {
+        error: errorMessage,
+        quizId,
+        platform: typeof window !== 'undefined' ? 'web' : 'native'
+      });
+      Alert.alert('Error', `Failed to update quiz: ${errorMessage}`);
     } finally {
       setSaving(false);
     }
