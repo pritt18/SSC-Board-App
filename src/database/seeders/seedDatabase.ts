@@ -737,10 +737,11 @@ export const seedDatabase = async () => {
 
       let subjectId: number;
       if (!subjectRows || subjectRows.length === 0) {
+        const icon = getSubjectIconForSeed(vid.subjectEnglish);
         await executeQuery(
           `INSERT INTO subjects (class_id, name_english, name_marathi, icon, is_active)
-           VALUES (?, ?, ?, '📚', 1)`,
-          [classId, vid.subjectEnglish, vid.subjectMarathi]
+           VALUES (?, ?, ?, ?, 1)`,
+          [classId, vid.subjectEnglish, vid.subjectMarathi, icon]
         );
         subjectRows = await executeQuery(
           `SELECT id FROM subjects WHERE class_id = ? AND LOWER(name_english) = LOWER(?) LIMIT 1`,
