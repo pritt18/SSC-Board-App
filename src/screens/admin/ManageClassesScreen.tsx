@@ -106,12 +106,16 @@ const ManageClassesScreen: React.FC<Props> = ({ navigation }) => {
 
       setClasses(classData as ClassData[]);
     } catch (error) {
-      console.error('Error loading classes:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('Error loading classes:', {
+        error: errorMessage,
+        platform: typeof window !== 'undefined' ? 'web' : 'native'
+      });
 
       if (Platform.OS === 'web') {
-        window.alert('Failed to load classes');
+        window.alert(`Failed to load classes: ${errorMessage}`);
       } else {
-        Alert.alert('Error', 'Failed to load classes');
+        Alert.alert('Error', `Failed to load classes: ${errorMessage}`);
       }
     } finally {
       setLoading(false);
@@ -342,16 +346,19 @@ const ManageClassesScreen: React.FC<Props> = ({ navigation }) => {
         'Class added successfully.'
       );
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       console.error(
         'Error saving class:',
-        error
+        {
+          error: errorMessage,
+          editingClass: editingClass?.id,
+          platform: typeof window !== 'undefined' ? 'web' : 'native'
+        }
       );
 
       showMessage(
         'Error',
-        `Failed to ${
-          editingClass ? 'update' : 'add'
-        } class.`
+        `Failed to ${editingClass ? 'update' : 'add'} class: ${errorMessage}`
       );
     } finally {
       setSaving(false);
@@ -401,14 +408,19 @@ const ManageClassesScreen: React.FC<Props> = ({ navigation }) => {
           } successfully.`
         );
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
         console.error(
           'Error toggling class:',
-          error
+          {
+            error: errorMessage,
+            classId: classItem.id,
+            platform: typeof window !== 'undefined' ? 'web' : 'native'
+          }
         );
 
         showMessage(
           'Error',
-          'Failed to update class status.'
+          `Failed to update class status: ${errorMessage}`
         );
       }
     };

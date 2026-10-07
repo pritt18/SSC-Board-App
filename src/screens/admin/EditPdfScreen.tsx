@@ -92,7 +92,13 @@ const EditPdfScreen: React.FC<Props> = ({ navigation, route }) => {
         });
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to load PDF');
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('Error loading PDF:', {
+        error: errorMessage,
+        pdfId,
+        platform: typeof window !== 'undefined' ? 'web' : 'native'
+      });
+      Alert.alert('Error', `Failed to load PDF: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -114,7 +120,11 @@ const EditPdfScreen: React.FC<Props> = ({ navigation, route }) => {
       );
       setSubjects(results as Subject[]);
     } catch (error) {
-      console.error('Error loading subjects:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('Error loading subjects:', {
+        error: errorMessage,
+        platform: typeof window !== 'undefined' ? 'web' : 'native'
+      });
     }
   };
 
@@ -129,7 +139,12 @@ const EditPdfScreen: React.FC<Props> = ({ navigation, route }) => {
       );
       setChapters(results as Chapter[]);
     } catch (error) {
-      console.error('Error loading chapters:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('Error loading chapters:', {
+        error: errorMessage,
+        subjectId,
+        platform: typeof window !== 'undefined' ? 'web' : 'native'
+      });
     }
   };
 
@@ -169,8 +184,13 @@ const EditPdfScreen: React.FC<Props> = ({ navigation, route }) => {
         { text: 'OK', onPress: () => navigation.goBack() }
       ]);
     } catch (error) {
-      console.error('Error updating PDF:', error);
-      Alert.alert('Error', 'Failed to update PDF');
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('Error updating PDF:', {
+        error: errorMessage,
+        pdfId,
+        platform: typeof window !== 'undefined' ? 'web' : 'native'
+      });
+      Alert.alert('Error', `Failed to update PDF: ${errorMessage}`);
     } finally {
       setSaving(false);
     }

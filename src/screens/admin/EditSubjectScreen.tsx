@@ -57,7 +57,13 @@ const EditSubjectScreen: React.FC<Props> = ({ navigation, route }) => {
         });
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to load subject');
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('Error loading subject:', {
+        error: errorMessage,
+        subjectId,
+        platform: typeof window !== 'undefined' ? 'web' : 'native'
+      });
+      Alert.alert('Error', `Failed to load subject: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -89,8 +95,13 @@ const EditSubjectScreen: React.FC<Props> = ({ navigation, route }) => {
         { text: 'OK', onPress: () => navigation.goBack() }
       ]);
     } catch (error) {
-      console.error('Error updating subject:', error);
-      Alert.alert('Error', 'Failed to update subject');
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('Error updating subject:', {
+        error: errorMessage,
+        subjectId,
+        platform: typeof window !== 'undefined' ? 'web' : 'native'
+      });
+      Alert.alert('Error', `Failed to update subject: ${errorMessage}`);
     } finally {
       setSaving(false);
     }

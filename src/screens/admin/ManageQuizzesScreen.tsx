@@ -232,12 +232,17 @@ const ManageQuizzesScreen: React.FC<Props> = ({
         setFilteredQuizzes(quizItems);
       }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       console.error(
         'Error loading quizzes:',
-        error
+        {
+          error: errorMessage,
+          selectedClass,
+          platform: typeof window !== 'undefined' ? 'web' : 'native'
+        }
       );
 
-      showError('Failed to load quizzes.');
+      showError(`Failed to load quizzes: ${errorMessage}`);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -268,9 +273,13 @@ const ManageQuizzesScreen: React.FC<Props> = ({
         }[]
       );
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       console.error(
         'Error loading classes:',
-        error
+        {
+          error: errorMessage,
+          platform: typeof window !== 'undefined' ? 'web' : 'native'
+        }
       );
     }
   };
@@ -400,13 +409,18 @@ const ManageQuizzesScreen: React.FC<Props> = ({
           // Reload from database
           await loadQuizzes();
         } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
           console.error(
             'Error updating quiz status:',
-            error
+            {
+              error: errorMessage,
+              quizId: id,
+              platform: typeof window !== 'undefined' ? 'web' : 'native'
+            }
           );
 
           showError(
-            'Failed to update quiz status.'
+            `Failed to update quiz status: ${errorMessage}`
           );
         }
       },
@@ -480,13 +494,18 @@ const ManageQuizzesScreen: React.FC<Props> = ({
           // Reload from database
           await loadQuizzes();
         } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
           console.error(
             'Error deleting quiz:',
-            error
+            {
+              error: errorMessage,
+              quizId: id,
+              platform: typeof window !== 'undefined' ? 'web' : 'native'
+            }
           );
 
           showError(
-            'Failed to delete quiz. Check the console for details.'
+            `Failed to delete quiz: ${errorMessage}`
           );
         }
       },

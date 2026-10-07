@@ -82,8 +82,13 @@ const ManageVideosScreen: React.FC<Props> = ({ navigation }) => {
       setVideos(items as VideoItem[]);
       setFilteredVideos(items as VideoItem[]);
     } catch (error) {
-      console.error('Error loading videos:', error);
-      showAlert('Error', 'Failed to load videos');
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('Error loading videos:', {
+        error: errorMessage,
+        selectedClass,
+        platform: typeof window !== 'undefined' ? 'web' : 'native'
+      });
+      showAlert('Error', `Failed to load videos: ${errorMessage}`);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -98,7 +103,11 @@ const ManageVideosScreen: React.FC<Props> = ({ navigation }) => {
       );
       setClasses(classData as { id: number; name: string }[]);
     } catch (error) {
-      console.error('Error loading classes:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('Error loading classes:', {
+        error: errorMessage,
+        platform: typeof window !== 'undefined' ? 'web' : 'native'
+      });
     }
   };
 
@@ -144,7 +153,13 @@ const ManageVideosScreen: React.FC<Props> = ({ navigation }) => {
           loadVideos();
           showAlert('Success', `Video ${currentStatus ? 'deactivated' : 'activated'}`);
         } catch (error) {
-          showAlert('Error', 'Failed to update video status');
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          console.error('Error updating video status:', {
+            error: errorMessage,
+            videoId: id,
+            platform: typeof window !== 'undefined' ? 'web' : 'native'
+          });
+          showAlert('Error', `Failed to update video status: ${errorMessage}`);
         }
       },
       'Confirm',
@@ -165,7 +180,13 @@ const ManageVideosScreen: React.FC<Props> = ({ navigation }) => {
           loadVideos();
           showAlert('Success', 'Video deleted successfully');
         } catch (error) {
-          showAlert('Error', 'Failed to delete video');
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          console.error('Error deleting video:', {
+            error: errorMessage,
+            videoId: id,
+            platform: typeof window !== 'undefined' ? 'web' : 'native'
+          });
+          showAlert('Error', `Failed to delete video: ${errorMessage}`);
         }
       },
       'Delete',

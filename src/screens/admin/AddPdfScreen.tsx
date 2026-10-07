@@ -61,8 +61,12 @@ const AddPdfScreen: React.FC<Props> = ({ navigation }) => {
       );
       setSubjects(results as Subject[]);
     } catch (error) {
-      console.error('Error loading subjects:', error);
-      Alert.alert('Error', 'Failed to load subjects');
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('Error loading subjects:', {
+        error: errorMessage,
+        platform: typeof window !== 'undefined' ? 'web' : 'native'
+      });
+      Alert.alert('Error', `Failed to load subjects: ${errorMessage}`);
     }
   };
 
@@ -132,8 +136,12 @@ const AddPdfScreen: React.FC<Props> = ({ navigation }) => {
       navigation.goBack();
 
     } catch (error) {
-      console.error('Error adding PDF:', error);
-      showAlert('Error', 'Failed to add PDF. ' + ((error as any)?.message || ''));
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('Error adding PDF:', {
+        error: errorMessage,
+        platform: typeof window !== 'undefined' ? 'web' : 'native'
+      });
+      showAlert('Error', `Failed to add PDF: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
