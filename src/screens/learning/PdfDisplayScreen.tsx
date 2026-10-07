@@ -18,7 +18,7 @@ const PDFJS_LIB_ASSET = require('../../../assets/pdfjs/pdf.min.js.txt');
 const PDFJS_WORKER_ASSET = require('../../../assets/pdfjs/pdf.worker.min.js.txt');
 
 // Upgraded versioned path to ensure cache refresh
-const VIEWER_HTML_PATH = FileSystem.documentDirectory + 'pdf_book_viewer_v2.html';
+const VIEWER_HTML_PATH = FileSystem.documentDirectory + 'pdf_book_viewer_v3.html';
 
 const buildViewerHtml = (pdfJsSource: string, pdfWorkerSource: string) => `
 <!DOCTYPE html>
@@ -33,6 +33,9 @@ const buildViewerHtml = (pdfJsSource: string, pdfWorkerSource: string) => `
       user-select: none;
       box-sizing: border-box;
     }
+    @media print {
+      body { display: none !important; }
+    }
     html, body {
       margin: 0;
       padding: 0;
@@ -41,25 +44,56 @@ const buildViewerHtml = (pdfJsSource: string, pdfWorkerSource: string) => `
       background: #1e293b;
       overflow: hidden;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      transition: background-color 0.2s ease;
+    }
+    body.night-mode {
+      background: #090d16;
     }
     #viewer-root {
       display: flex;
       flex-direction: column;
       height: 100%;
       width: 100%;
+      position: relative;
     }
     #top-bar {
-      height: 44px;
+      min-height: 48px;
       background: #0f172a;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 16px;
+      padding: 4px 12px;
       color: #e2e8f0;
       font-size: 13px;
       font-weight: 600;
       border-bottom: 1px solid #334155;
       z-index: 50;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    body.night-mode #top-bar {
+      background: #030712;
+      border-bottom-color: #1e293b;
+    }
+    .top-section-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+      min-width: 140px;
+    }
+    .top-section-right {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    #title-display {
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 140px;
     }
     #book-viewport {
       flex: 1;
@@ -70,6 +104,10 @@ const buildViewerHtml = (pdfJsSource: string, pdfWorkerSource: string) => `
       overflow: auto;
       background: #334155;
       padding: 12px;
+      transition: background-color 0.2s ease;
+    }
+    body.night-mode #book-viewport {
+      background: #111827;
     }
     #page-card {
       position: relative;
@@ -86,6 +124,10 @@ const buildViewerHtml = (pdfJsSource: string, pdfWorkerSource: string) => `
       max-width: 100%;
       height: auto;
       border-radius: 4px;
+      transition: filter 0.25s ease;
+    }
+    body.night-mode #page-card canvas {
+      filter: invert(90%) hue-rotate(180deg);
     }
     .side-nav-btn {
       position: absolute;
@@ -111,7 +153,7 @@ const buildViewerHtml = (pdfJsSource: string, pdfWorkerSource: string) => `
       pointer-events: none;
     }
     #bottom-bar {
-      height: 56px;
+      height: 54px;
       background: #0f172a;
       display: flex;
       align-items: center;
@@ -121,22 +163,32 @@ const buildViewerHtml = (pdfJsSource: string, pdfWorkerSource: string) => `
       color: white;
       z-index: 50;
     }
+    body.night-mode #bottom-bar {
+      background: #030712;
+      border-top-color: #1e293b;
+    }
     .bar-btn {
       background: #1e293b;
       border: 1px solid #334155;
       color: #ffffff;
-      padding: 8px 12px;
+      padding: 6px 10px;
       border-radius: 6px;
       font-size: 13px;
       font-weight: 600;
       cursor: pointer;
-      display: flex;
+      display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: 4px;
     }
     .bar-btn-primary {
       background: #2563eb;
       border-color: #3b82f6;
+    }
+    .bar-btn-active {
+      background: #f59e0b;
+      border-color: #fbbf24;
+      color: #000;
     }
     .bar-btn:active { opacity: 0.7; }
     .bar-btn:disabled {
@@ -181,17 +233,175 @@ const buildViewerHtml = (pdfJsSource: string, pdfWorkerSource: string) => `
       0% { opacity: 0.4; transform: translateX(-30px) scale(0.98); }
       100% { opacity: 1; transform: translateX(0) scale(1); }
     }
+    #toast-notice {
+      position: absolute;
+      top: 56px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #2563eb;
+      color: #ffffff;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      z-index: 90;
+      display: none;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+      animation: fadeInOut 2.5s ease forwards;
+    }
+    @keyframes fadeInOut {
+      0% { opacity: 0; transform: translate(-50%, -10px); }
+      15% { opacity: 1; transform: translate(-50%, 0); }
+      85% { opacity: 1; transform: translate(-50%, 0); }
+      100% { opacity: 0; transform: translate(-50%, -10px); }
+    }
+    /* Modals for Search and Bookmarks */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .modal-box {
+      background: #1e293b;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 440px;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border: 1px solid #334155;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      border-bottom: 1px solid #334155;
+      color: #ffffff;
+      font-size: 15px;
+      font-weight: 700;
+    }
+    .modal-close-btn {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-size: 20px;
+      cursor: pointer;
+      padding: 4px;
+    }
+    .modal-body {
+      padding: 14px 16px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .search-input-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .search-input {
+      flex: 1;
+      height: 38px;
+      background: #0f172a;
+      border: 1px solid #475569;
+      color: #ffffff;
+      border-radius: 6px;
+      padding: 0 10px;
+      font-size: 14px;
+      outline: none;
+    }
+    .search-result-item {
+      padding: 10px;
+      background: #0f172a;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      border: 1px solid #334155;
+    }
+    .search-result-item:hover {
+      border-color: #3b82f6;
+    }
+    .search-result-page {
+      font-weight: 700;
+      color: #60a5fa;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+    .search-result-snippet {
+      font-size: 12px;
+      color: #cbd5e1;
+      line-height: 1.4;
+    }
+    .bookmark-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      background: #0f172a;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      border: 1px solid #334155;
+    }
+    .bookmark-page-btn {
+      color: #f1f5f9;
+      font-weight: 600;
+      cursor: pointer;
+      background: transparent;
+      border: none;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .bookmark-del-btn {
+      color: #ef4444;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      padding: 4px 8px;
+    }
+    .empty-modal-text {
+      color: #94a3b8;
+      font-size: 13px;
+      text-align: center;
+      padding: 24px 0;
+    }
   </style>
 </head>
 <body oncontextmenu="return false">
   <div id="viewer-root">
+    <div id="toast-notice"></div>
+
     <div id="top-bar">
-      <span id="title-display">पुस्तकाचे पान (Book Reader)</span>
-      <span id="zoom-controls">
-        <button id="btn-zoom-out" class="bar-btn" style="padding:4px 8px;">−</button>
-        <span id="zoom-val" style="padding:0 6px;">100%</span>
-        <button id="btn-zoom-in" class="bar-btn" style="padding:4px 8px;">+</button>
-      </span>
+      <div class="top-section-left">
+        <span id="title-display">पुस्तकाचे पान (Reader)</span>
+      </div>
+
+      <div class="top-section-right">
+        <!-- Search Button -->
+        <button id="btn-search-open" class="bar-btn" title="Search Text in Book">🔍</button>
+        <!-- Bookmark Toggle -->
+        <button id="btn-bookmark-toggle" class="bar-btn" title="Bookmark This Page">🔖</button>
+        <!-- Bookmarks List -->
+        <button id="btn-bookmarks-list" class="bar-btn" title="View Bookmarks">📚</button>
+        <!-- Night Mode -->
+        <button id="btn-night-toggle" class="bar-btn" title="Toggle Night Mode">🌙</button>
+
+        <!-- Zoom Controls -->
+        <span id="zoom-controls" style="display:flex;align-items:center;gap:3px;margin-left:4px;">
+          <button id="btn-zoom-out" class="bar-btn" style="padding:4px 7px;">−</button>
+          <button id="btn-zoom-reset" class="bar-btn" style="padding:4px 6px;font-size:11px;">100%</button>
+          <button id="btn-zoom-in" class="bar-btn" style="padding:4px 7px;">+</button>
+        </span>
+      </div>
     </div>
 
     <div id="book-viewport">
@@ -214,6 +424,37 @@ const buildViewerHtml = (pdfJsSource: string, pdfWorkerSource: string) => `
       <button id="btn-next" class="bar-btn bar-btn-primary">पुढील ›</button>
       <button id="btn-last" class="bar-btn">⏭</button>
     </div>
+
+    <!-- Search Modal -->
+    <div id="search-modal" class="modal-overlay">
+      <div class="modal-box">
+        <div class="modal-header">
+          <span>पुस्तकात शोधा (Search Book)</span>
+          <button id="btn-search-close" class="modal-close-btn">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="search-input-row">
+            <input id="search-input-field" class="search-input" placeholder="शब्द किंवा धडा शोधा..." />
+            <button id="btn-do-search" class="bar-btn bar-btn-primary">शोधा</button>
+          </div>
+          <div id="search-status" style="font-size:12px;color:#94a3b8;margin-bottom:8px;min-height:16px;"></div>
+          <div id="search-results-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bookmarks Modal -->
+    <div id="bookmarks-modal" class="modal-overlay">
+      <div class="modal-box">
+        <div class="modal-header">
+          <span>जतन केलेली पाने (Bookmarks)</span>
+          <button id="btn-bookmarks-close" class="modal-close-btn">✕</button>
+        </div>
+        <div class="modal-body">
+          <div id="bookmarks-items-list"></div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -233,6 +474,9 @@ const buildViewerHtml = (pdfJsSource: string, pdfWorkerSource: string) => `
     var scale = 1.35;
     var isRendering = false;
     var activeRenderTask = null;
+    var isNightMode = false;
+    var bookmarks = [];
+    var currentFileUri = '';
 
     var canvas = document.getElementById('pdf-canvas');
     var ctx = canvas.getContext('2d');
@@ -240,7 +484,7 @@ const buildViewerHtml = (pdfJsSource: string, pdfWorkerSource: string) => `
     var statusEl = document.getElementById('status-overlay');
     var pageInput = document.getElementById('page-input');
     var pageTotal = document.getElementById('page-total');
-    var zoomVal = document.getElementById('zoom-val');
+    var toastNotice = document.getElementById('toast-notice');
 
     var btnPrev = document.getElementById('btn-prev');
     var btnNext = document.getElementById('btn-next');
@@ -249,10 +493,225 @@ const buildViewerHtml = (pdfJsSource: string, pdfWorkerSource: string) => `
     var btnFirst = document.getElementById('btn-first');
     var btnLast = document.getElementById('btn-last');
 
+    var btnNightToggle = document.getElementById('btn-night-toggle');
+    var btnBookmarkToggle = document.getElementById('btn-bookmark-toggle');
+    var btnBookmarksList = document.getElementById('btn-bookmarks-list');
+    var bookmarksModal = document.getElementById('bookmarks-modal');
+    var btnBookmarksClose = document.getElementById('btn-bookmarks-close');
+    var bookmarksItemsList = document.getElementById('bookmarks-items-list');
+
+    var btnSearchOpen = document.getElementById('btn-search-open');
+    var searchModal = document.getElementById('search-modal');
+    var btnSearchClose = document.getElementById('btn-search-close');
+    var searchInputField = document.getElementById('search-input-field');
+    var btnDoSearch = document.getElementById('btn-do-search');
+    var searchStatus = document.getElementById('search-status');
+    var searchResultsList = document.getElementById('search-results-list');
+
+    // Storage keys
+    function getStorageKey(subKey) {
+      var base = currentFileUri.replace(/[^a-zA-Z0-9]/g, '_').slice(-40);
+      return 'ssc_pdf_' + base + '_' + subKey;
+    }
+
+    function showToast(msg) {
+      toastNotice.textContent = msg;
+      toastNotice.style.display = 'block';
+      setTimeout(function() {
+        toastNotice.style.display = 'none';
+      }, 2500);
+    }
+
+    // Security protections
+    document.addEventListener('contextmenu', function(e) { e.preventDefault(); return false; });
+    document.addEventListener('keydown', function(e) {
+      if ((e.ctrlKey || e.metaKey) && ['s', 'p', 'u', 'c'].indexOf(e.key.toLowerCase()) !== -1) {
+        e.preventDefault();
+        return false;
+      }
+      if (e.key === 'PrintScreen') {
+        try { if (navigator.clipboard) navigator.clipboard.writeText(''); } catch(err){}
+      }
+    });
+
+    // Night Mode
+    function initNightMode() {
+      try {
+        var savedNight = localStorage.getItem('ssc_pdf_night_mode');
+        if (savedNight === 'true') {
+          isNightMode = true;
+          document.body.classList.add('night-mode');
+          btnNightToggle.textContent = '☀️';
+        }
+      } catch(e){}
+    }
+
+    btnNightToggle.onclick = function() {
+      isNightMode = !isNightMode;
+      if (isNightMode) {
+        document.body.classList.add('night-mode');
+        btnNightToggle.textContent = '☀️';
+      } else {
+        document.body.classList.remove('night-mode');
+        btnNightToggle.textContent = '🌙';
+      }
+      try {
+        localStorage.setItem('ssc_pdf_night_mode', isNightMode ? 'true' : 'false');
+      } catch(e){}
+    };
+
+    // Bookmarks logic
+    function loadBookmarks() {
+      try {
+        var raw = localStorage.getItem(getStorageKey('bookmarks'));
+        if (raw) bookmarks = JSON.parse(raw);
+        else bookmarks = [];
+      } catch(e) {
+        bookmarks = [];
+      }
+      updateBookmarkIcon();
+    }
+
+    function saveBookmarks() {
+      try {
+        localStorage.setItem(getStorageKey('bookmarks'), JSON.stringify(bookmarks));
+      } catch(e){}
+      updateBookmarkIcon();
+    }
+
+    function updateBookmarkIcon() {
+      var isCurrentSaved = bookmarks.indexOf(currentPage) !== -1;
+      if (isCurrentSaved) {
+        btnBookmarkToggle.classList.add('bar-btn-active');
+        btnBookmarkToggle.textContent = '★';
+      } else {
+        btnBookmarkToggle.classList.remove('bar-btn-active');
+        btnBookmarkToggle.textContent = '🔖';
+      }
+    }
+
+    btnBookmarkToggle.onclick = function() {
+      var idx = bookmarks.indexOf(currentPage);
+      if (idx !== -1) {
+        bookmarks.splice(idx, 1);
+        showToast('पान ' + currentPage + ' बुकमार्क मधून काढले');
+      } else {
+        bookmarks.push(currentPage);
+        bookmarks.sort(function(a, b) { return a - b; });
+        showToast('पान ' + currentPage + ' बुकमार्क केले 🔖');
+      }
+      saveBookmarks();
+    };
+
+    function renderBookmarksModal() {
+      bookmarksItemsList.innerHTML = '';
+      if (bookmarks.length === 0) {
+        bookmarksItemsList.innerHTML = '<div class="empty-modal-text">कोणतेही बुकमार्क जतन केलेले नाही.<br>(No bookmarks saved yet)</div>';
+        return;
+      }
+      bookmarks.forEach(function(pg) {
+        var row = document.createElement('div');
+        row.className = 'bookmark-item';
+
+        var pageBtn = document.createElement('button');
+        pageBtn.className = 'bookmark-page-btn';
+        pageBtn.textContent = '🔖 पान ' + pg;
+        pageBtn.onclick = function() {
+          bookmarksModal.style.display = 'none';
+          goToPage(pg);
+        };
+
+        var delBtn = document.createElement('button');
+        delBtn.className = 'bookmark-del-btn';
+        delBtn.textContent = '✕';
+        delBtn.onclick = function() {
+          var i = bookmarks.indexOf(pg);
+          if (i !== -1) {
+            bookmarks.splice(i, 1);
+            saveBookmarks();
+            renderBookmarksModal();
+          }
+        };
+
+        row.appendChild(pageBtn);
+        row.appendChild(delBtn);
+        bookmarksItemsList.appendChild(row);
+      });
+    }
+
+    btnBookmarksList.onclick = function() {
+      renderBookmarksModal();
+      bookmarksModal.style.display = 'flex';
+    };
+    btnBookmarksClose.onclick = function() {
+      bookmarksModal.style.display = 'none';
+    };
+
+    // Search logic
+    btnSearchOpen.onclick = function() {
+      searchModal.style.display = 'flex';
+      setTimeout(function() { searchInputField.focus(); }, 100);
+    };
+    btnSearchClose.onclick = function() {
+      searchModal.style.display = 'none';
+    };
+
+    btnDoSearch.onclick = async function() {
+      var query = (searchInputField.value || '').trim();
+      if (!query || !pdfDoc) return;
+
+      searchStatus.textContent = 'पुस्तकात शोधत आहे...';
+      searchResultsList.innerHTML = '';
+      btnDoSearch.disabled = true;
+
+      var results = [];
+      var lowerQuery = query.toLowerCase();
+
+      try {
+        for (var i = 1; i <= totalPages; i++) {
+          if (i % 3 === 0 || i === totalPages) {
+            searchStatus.textContent = 'तपासत आहे: पान ' + i + ' / ' + totalPages + '...';
+          }
+          var page = await pdfDoc.getPage(i);
+          var textContent = await page.getTextContent();
+          var fullText = textContent.items.map(function(item) { return item.str; }).join(' ');
+
+          var matchIndex = fullText.toLowerCase().indexOf(lowerQuery);
+          if (matchIndex !== -1) {
+            var start = Math.max(0, matchIndex - 35);
+            var end = Math.min(fullText.length, matchIndex + query.length + 35);
+            var snippet = fullText.substring(start, end).replace(/\\s+/g, ' ');
+            results.push({ pageNumber: i, snippet: '...' + snippet + '...' });
+          }
+          page.cleanup();
+        }
+
+        searchStatus.textContent = results.length + ' परिणाम सापडले (Results found)';
+        if (results.length === 0) {
+          searchResultsList.innerHTML = '<div class="empty-modal-text">काहीही सापडले नाही.<br>(No matches found for "' + query + '")</div>';
+        } else {
+          results.forEach(function(r) {
+            var item = document.createElement('div');
+            item.className = 'search-result-item';
+            item.innerHTML = '<div class="search-result-page">📄 पान ' + r.pageNumber + '</div><div class="search-result-snippet">' + r.snippet + '</div>';
+            item.onclick = function() {
+              searchModal.style.display = 'none';
+              goToPage(r.pageNumber);
+            };
+            searchResultsList.appendChild(item);
+          });
+        }
+      } catch(err) {
+        searchStatus.textContent = 'शोधताना अडचण आली: ' + (err.message || '');
+      } finally {
+        btnDoSearch.disabled = false;
+      }
+    };
+
     function updateNavState() {
       pageInput.value = currentPage;
       pageTotal.textContent = '/ ' + totalPages;
-      zoomVal.textContent = Math.round(scale * 100) + '%';
+      document.getElementById('btn-zoom-reset').textContent = Math.round(scale * 100) + '%';
 
       var atStart = currentPage <= 1;
       var atEnd = currentPage >= totalPages;
@@ -264,6 +723,13 @@ const buildViewerHtml = (pdfJsSource: string, pdfWorkerSource: string) => `
       btnNext.disabled = atEnd;
       sideNext.disabled = atEnd;
       btnLast.disabled = atEnd;
+
+      updateBookmarkIcon();
+
+      // Remember last page
+      try {
+        localStorage.setItem(getStorageKey('last_page'), String(currentPage));
+      } catch(e){}
     }
 
     async function renderPage(num, direction) {
@@ -349,6 +815,10 @@ const buildViewerHtml = (pdfJsSource: string, pdfWorkerSource: string) => `
     document.getElementById('btn-zoom-out').onclick = function() {
       if (scale > 0.8) { scale -= 0.2; renderPage(currentPage); }
     };
+    document.getElementById('btn-zoom-reset').onclick = function() {
+      scale = 1.35;
+      renderPage(currentPage);
+    };
 
     // Touch Swipe Detection (Finger swipe to turn page like a real book)
     var touchStartX = 0;
@@ -374,12 +844,32 @@ const buildViewerHtml = (pdfJsSource: string, pdfWorkerSource: string) => `
 
     async function initPdf(fileUri) {
       try {
+        currentFileUri = fileUri || '';
+        initNightMode();
+        loadBookmarks();
+
         statusEl.textContent = 'पुस्तक उघडत आहे...';
         pdfDoc = await pdfjsLib.getDocument({ url: fileUri }).promise;
         totalPages = pdfDoc.numPages;
-        currentPage = 1;
+
+        // Restore last remembered page
+        var startPage = 1;
+        try {
+          var saved = localStorage.getItem(getStorageKey('last_page'));
+          if (saved) {
+            var p = parseInt(saved, 10);
+            if (!isNaN(p) && p >= 1 && p <= totalPages) {
+              startPage = p;
+              if (startPage > 1) {
+                showToast('पुन्हा सुरू केले: पान ' + startPage + ' वरून');
+              }
+            }
+          }
+        } catch(e){}
+
+        currentPage = startPage;
         updateNavState();
-        renderPage(1);
+        renderPage(currentPage);
       } catch (err) {
         statusEl.textContent = 'पुस्तक उघडता आले नाही: ' + (err ? err.message : '');
       }
