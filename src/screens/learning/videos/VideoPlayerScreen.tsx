@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { AVPlaybackStatus, ResizeMode, Video } from 'expo-av';
 import * as ScreenOrientation from 'expo-screen-orientation';
-import * as ScreenCapture from 'expo-screen-capture';
+import * as ScreenCapture from '../../../utils/safeScreenCapture';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
 import { SafeAreaView } from 'react-native-safe-area-context';

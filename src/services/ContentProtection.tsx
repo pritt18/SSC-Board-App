@@ -1,5 +1,5 @@
 import { Platform, Alert } from 'react-native';
-import * as ScreenCapture from 'expo-screen-capture';
+import * as ScreenCapture from '../utils/safeScreenCapture';
 import { useEffect } from 'react';
 
 export const useContentProtection = (enabled: boolean = true) => {
