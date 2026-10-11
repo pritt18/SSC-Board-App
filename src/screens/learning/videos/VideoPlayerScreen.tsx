@@ -227,10 +227,21 @@ const VideoPlayerScreen: React.FC<Props> = ({ navigation, route }) => {
       window.addEventListener('keyup', handleKeyUp);
       window.addEventListener('blur', wipeClipboard);
 
-      // Inject Print Killer CSS
+      // Inject Web Video Normalizer & Print Killer CSS
       const printShield = document.createElement('style');
       printShield.id = 'ssc-video-print-shield';
       printShield.innerHTML = `
+        video {
+          width: 100% !important;
+          height: 100% !important;
+          max-width: 100% !important;
+          max-height: 100% !important;
+          object-fit: contain !important;
+          object-position: center center !important;
+          margin: 0 auto !important;
+          display: block !important;
+          background-color: #000000 !important;
+        }
         @media print {
           body, html, #root, * {
             display: none !important;
@@ -240,12 +251,31 @@ const VideoPlayerScreen: React.FC<Props> = ({ navigation, route }) => {
       `;
       document.head.appendChild(printShield);
 
+      const handleFullscreenChange = () => {
+        const doc = document as any;
+        const isCurrentlyFullscreen = !!(
+          doc.fullscreenElement ||
+          doc.webkitFullscreenElement ||
+          doc.mozFullScreenElement ||
+          doc.msFullscreenElement
+        );
+        setIsLandscape(isCurrentlyFullscreen);
+        if (isCurrentlyFullscreen) {
+          triggerLandscapeControls();
+        }
+      };
+
+      document.addEventListener('fullscreenchange', handleFullscreenChange);
+      document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+
       return () => {
         window.removeEventListener('contextmenu', handleContextMenu);
         window.removeEventListener('dragstart', handleDragStart);
         window.removeEventListener('keydown', handleKeyDown);
         window.removeEventListener('keyup', handleKeyUp);
         window.removeEventListener('blur', wipeClipboard);
+        document.removeEventListener('fullscreenchange', handleFullscreenChange);
+        document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
         const el = document.getElementById('ssc-video-print-shield');
         if (el) el.remove();
         ScreenCapture.allowScreenCaptureAsync().catch(() => {});
@@ -255,7 +285,7 @@ const VideoPlayerScreen: React.FC<Props> = ({ navigation, route }) => {
     return () => {
       ScreenCapture.allowScreenCaptureAsync().catch(() => {});
     };
-  }, []);
+  }, [triggerLandscapeControls]);
 
   // -------------------------------------------------------------
   // RESOLVE VIDEO SOURCE (Bundled assets, Local disk, Drive stream)
@@ -766,11 +796,28 @@ const VideoPlayerScreen: React.FC<Props> = ({ navigation, route }) => {
     try {
       setShowSpeedOptions(false);
       if (Platform.OS === 'web' && typeof document !== 'undefined') {
-        if (document.fullscreenElement) {
-          await document.exitFullscreen?.();
+        const doc = document as any;
+        const isCurrentlyFullscreen = !!(
+          doc.fullscreenElement ||
+          doc.webkitFullscreenElement ||
+          doc.mozFullScreenElement ||
+          doc.msFullscreenElement
+        );
+
+        if (isCurrentlyFullscreen || isLandscape) {
+          if (doc.exitFullscreen) {
+            await doc.exitFullscreen();
+          } else if (doc.webkitExitFullscreen) {
+            await doc.webkitExitFullscreen();
+          }
           setIsLandscape(false);
         } else {
-          await document.documentElement.requestFullscreen?.();
+          const docEl = document.documentElement as any;
+          if (docEl.requestFullscreen) {
+            await docEl.requestFullscreen();
+          } else if (docEl.webkitRequestFullscreen) {
+            await docEl.webkitRequestFullscreen();
+          }
           setIsLandscape(true);
           triggerLandscapeControls();
         }
@@ -915,6 +962,11 @@ const VideoPlayerScreen: React.FC<Props> = ({ navigation, route }) => {
 
       {/* Video Player Container (Never unmounts across orientation changes!) */}
       <View
+        // @ts-ignore
+        onContextMenu={(e: any) => {
+          e.preventDefault?.();
+          return false;
+        }}
         style={[
           styles.videoContainer,
           isLandscape ? styles.videoContainerLandscape : styles.videoContainerPortrait,
@@ -925,6 +977,7 @@ const VideoPlayerScreen: React.FC<Props> = ({ navigation, route }) => {
           key={selectedVideo.id}
           source={videoSource || { uri: selectedVideo.video_url }}
           style={styles.video}
+          videoStyle={styles.videoInner}
           resizeMode={ResizeMode.CONTAIN}
           useNativeControls={false}
           shouldPlay={false}
@@ -967,18 +1020,6 @@ const VideoPlayerScreen: React.FC<Props> = ({ navigation, route }) => {
             CONFIDENTIAL • DO NOT SHARE OR SCREEN RECORD
           </Text>
         </View>
-
-        {/* Web Video Shield Overlay (Blocks native right-click and save on web) */}
-        {Platform.OS === 'web' && (
-          <View
-            style={styles.webVideoShield}
-            // @ts-ignore
-            onContextMenu={(e: any) => {
-              e.preventDefault();
-              return false;
-            }}
-          />
-        )}
 
         {/* Landscape Floating Fullscreen Controls Overlay */}
         {isLandscape && (
@@ -1694,24 +1735,37 @@ const styles = StyleSheet.create({
     aspectRatio: 16 / 9,
     borderRadius: Platform.OS === 'web' ? 12 : 0,
     overflow: 'hidden',
+    backgroundColor: '#000000',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   videoContainerLandscape: {
-    position: 'absolute',
+    position: Platform.OS === 'web' ? ('fixed' as any) : 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    width: '100%',
-    height: '100%',
+    width: Platform.OS === 'web' ? ('100vw' as any) : '100%',
+    height: Platform.OS === 'web' ? ('100vh' as any) : '100%',
     maxWidth: undefined,
     aspectRatio: undefined,
-    zIndex: 999,
+    zIndex: 99999,
     backgroundColor: '#000000',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   video: {
     width: '100%',
     height: '100%',
     backgroundColor: '#000000',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  videoInner: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#000000',
+    alignSelf: 'center',
   },
   securityWatermarkOverlay: {
     position: 'absolute',
@@ -1821,6 +1875,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 5,
   },
   subtitleOverlay: {
     position: 'absolute',
