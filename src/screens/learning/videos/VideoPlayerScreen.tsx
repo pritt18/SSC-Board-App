@@ -171,39 +171,83 @@ const VideoPlayerScreen: React.FC<Props> = ({ navigation, route }) => {
   // Anti-download, Anti-save, Anti-share, Anti-screenshot
   // -------------------------------------------------------------
   useEffect(() => {
-    // 1. Prevent Mobile Screen Capture / Recording
+    // 1. Prevent Mobile Screen Capture / Recording (Android OS FLAG_SECURE)
     ScreenCapture.preventScreenCaptureAsync().catch(() => {});
 
-    // 2. Prevent Web Context Menu and Keyboard Screen Grab
+    // 2. Prevent Web Context Menu, Drag, DevTools, Print, and Screen Grab
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       const handleContextMenu = (e: MouseEvent) => {
         e.preventDefault();
         return false;
       };
 
+      const handleDragStart = (e: DragEvent) => {
+        e.preventDefault();
+        return false;
+      };
+
+      const wipeClipboard = () => {
+        try {
+          if (navigator.clipboard?.writeText) {
+            navigator.clipboard.writeText('');
+          }
+        } catch (err) {}
+      };
+
       const handleKeyDown = (e: KeyboardEvent) => {
+        const key = (e.key || '').toLowerCase();
+        // Block Ctrl/Cmd + S, P, U, C, X, A
+        if ((e.ctrlKey || e.metaKey) && ['s', 'p', 'u', 'c', 'x', 'a'].includes(key)) {
+          e.preventDefault();
+          return false;
+        }
+        // Block F12, DevTools: Ctrl+Shift+I, J, C, S
         if (
-          (e.ctrlKey || e.metaKey) &&
-          ['s', 'p', 'u', 'c'].includes(e.key.toLowerCase())
+          e.key === 'F12' ||
+          ((e.ctrlKey || e.metaKey) && e.shiftKey && ['i', 'j', 'c', 's'].includes(key))
         ) {
           e.preventDefault();
           return false;
         }
         if (e.key === 'PrintScreen') {
-          try {
-            if (navigator.clipboard?.writeText) {
-              navigator.clipboard.writeText('');
-            }
-          } catch (err) {}
+          wipeClipboard();
+          showToast('⚠️ Screenshots and downloading are restricted for course content.');
+        }
+      };
+
+      const handleKeyUp = (e: KeyboardEvent) => {
+        if (e.key === 'PrintScreen') {
+          wipeClipboard();
         }
       };
 
       window.addEventListener('contextmenu', handleContextMenu);
+      window.addEventListener('dragstart', handleDragStart);
       window.addEventListener('keydown', handleKeyDown);
+      window.addEventListener('keyup', handleKeyUp);
+      window.addEventListener('blur', wipeClipboard);
+
+      // Inject Print Killer CSS
+      const printShield = document.createElement('style');
+      printShield.id = 'ssc-video-print-shield';
+      printShield.innerHTML = `
+        @media print {
+          body, html, #root, * {
+            display: none !important;
+            visibility: hidden !important;
+          }
+        }
+      `;
+      document.head.appendChild(printShield);
 
       return () => {
         window.removeEventListener('contextmenu', handleContextMenu);
+        window.removeEventListener('dragstart', handleDragStart);
         window.removeEventListener('keydown', handleKeyDown);
+        window.removeEventListener('keyup', handleKeyUp);
+        window.removeEventListener('blur', wipeClipboard);
+        const el = document.getElementById('ssc-video-print-shield');
+        if (el) el.remove();
         ScreenCapture.allowScreenCaptureAsync().catch(() => {});
       };
     }
@@ -912,6 +956,28 @@ const VideoPlayerScreen: React.FC<Props> = ({ navigation, route }) => {
           <View pointerEvents="none" style={styles.subtitleOverlay}>
             <Text style={styles.subtitleText}>{currentSubtitle}</Text>
           </View>
+        )}
+
+        {/* Security Forensic Watermark Overlay (Mobile & Web) */}
+        <View pointerEvents="none" style={styles.securityWatermarkOverlay}>
+          <Text style={styles.securityWatermarkText}>
+            {user?.full_name || user?.username || 'SSC Student'} • {user?.email || 'Protected Material'} • SSC Board
+          </Text>
+          <Text style={styles.securityWatermarkSub}>
+            CONFIDENTIAL • DO NOT SHARE OR SCREEN RECORD
+          </Text>
+        </View>
+
+        {/* Web Video Shield Overlay (Blocks native right-click and save on web) */}
+        {Platform.OS === 'web' && (
+          <View
+            style={styles.webVideoShield}
+            // @ts-ignore
+            onContextMenu={(e: any) => {
+              e.preventDefault();
+              return false;
+            }}
+          />
         )}
 
         {/* Landscape Floating Fullscreen Controls Overlay */}
@@ -1646,6 +1712,43 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     backgroundColor: '#000000',
+  },
+  securityWatermarkOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    transform: [{ rotate: '-22deg' }],
+    opacity: 0.14,
+    zIndex: 8,
+  },
+  securityWatermarkText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    textAlign: 'center',
+  },
+  securityWatermarkSub: {
+    color: '#CBD5E1',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  webVideoShield: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 2,
+    backgroundColor: 'transparent',
   },
   landscapeTouchArea: {
     position: 'absolute',

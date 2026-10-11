@@ -10,6 +10,7 @@ import * as ScreenCapture from '../../utils/safeScreenCapture';
 import { COLORS } from '../../constants/colors';
 import { LearningStackParamList } from '../../navigation/navigationTypes';
 import { resolvePdfSource } from '../../utils/pdfResolver';
+import { useAuth } from '../../context/AuthContext';
 
 type Props = NativeStackScreenProps<LearningStackParamList, 'PdfDisplay'>;
 
@@ -18,8 +19,8 @@ const PDFJS_LIB_ASSET = require('../../../assets/pdfjs/pdf.min.js.txt');
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const PDFJS_WORKER_ASSET = require('../../../assets/pdfjs/pdf.worker.min.js.txt');
 
-// Upgraded versioned path to ensure cache refresh
-const VIEWER_HTML_PATH = FileSystem.documentDirectory + 'pdf_book_viewer_v5.html';
+// Upgraded versioned path to ensure cache refresh with security watermarking
+const VIEWER_HTML_PATH = FileSystem.documentDirectory + 'pdf_book_viewer_v6.html';
 
 const buildViewerHtml = (pdfJsSource: string, pdfWorkerSource: string) => `
 <!DOCTYPE html>
@@ -29,13 +30,14 @@ const buildViewerHtml = (pdfJsSource: string, pdfWorkerSource: string) => `
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.5, user-scalable=yes" />
   <style>
     * {
-      -webkit-touch-callout: none;
-      -webkit-user-select: none;
-      user-select: none;
+      -webkit-touch-callout: none !important;
+      -webkit-user-select: none !important;
+      user-select: none !important;
+      -webkit-user-drag: none !important;
       box-sizing: border-box;
     }
     @media print {
-      body { display: none !important; }
+      body, html, #viewer-root, * { display: none !important; visibility: hidden !important; }
     }
     html, body {
       margin: 0;
@@ -413,6 +415,11 @@ const buildViewerHtml = (pdfJsSource: string, pdfWorkerSource: string) => `
       <div id="page-card">
         <div id="status-overlay">पुस्तक लोड होत आहे...</div>
         <canvas id="pdf-canvas" style="display:none;"></canvas>
+        <div id="page-watermark-overlay" style="position:absolute;inset:0;pointer-events:none;display:flex;flex-direction:column;justify-content:center;align-items:center;transform:rotate(-25deg);opacity:0.13;z-index:30;user-select:none;">
+          <span id="wm-user-text" style="font-size:18px;font-weight:800;color:#0f172a;letter-spacing:1px;text-transform:uppercase;">SSC Board Protected</span>
+          <span style="font-size:10px;font-weight:700;color:#475569;margin-top:4px;">CONFIDENTIAL • DO NOT SHARE OR SCREENSHOT</span>
+        </div>
+        <div id="page-canvas-shield" style="position:absolute;inset:0;z-index:25;background:transparent;" oncontextmenu="return false;"></div>
       </div>
       <button id="side-next" class="side-nav-btn side-nav-right">›</button>
     </div>
@@ -526,17 +533,36 @@ const buildViewerHtml = (pdfJsSource: string, pdfWorkerSource: string) => `
       }, 2500);
     }
 
-    // Security protections
+    // Enhanced Security protections
     document.addEventListener('contextmenu', function(e) { e.preventDefault(); return false; });
+    document.addEventListener('dragstart', function(e) { e.preventDefault(); return false; });
+    function wipeClipboard() {
+      try { if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(''); } catch(err){}
+    }
     document.addEventListener('keydown', function(e) {
-      if ((e.ctrlKey || e.metaKey) && ['s', 'p', 'u', 'c'].indexOf(e.key.toLowerCase()) !== -1) {
+      var key = (e.key || '').toLowerCase();
+      // Block Ctrl/Cmd + S, P, U, C, X, A
+      if ((e.ctrlKey || e.metaKey) && ['s', 'p', 'u', 'c', 'x', 'a'].indexOf(key) !== -1) {
+        e.preventDefault();
+        return false;
+      }
+      // Block F12, DevTools
+      if (e.key === 'F12' || ((e.ctrlKey || e.metaKey) && e.shiftKey && ['i', 'j', 'c', 's'].indexOf(key) !== -1)) {
         e.preventDefault();
         return false;
       }
       if (e.key === 'PrintScreen') {
-        try { if (navigator.clipboard) navigator.clipboard.writeText(''); } catch(err){}
+        wipeClipboard();
+        showToast('⚠️ स्क्रीनशॉट किंवा सेव्ह करणे प्रतिबंधित आहे');
       }
     });
+    document.addEventListener('keyup', function(e) {
+      if (e.key === 'PrintScreen') {
+        wipeClipboard();
+      }
+    });
+    window.addEventListener('beforeprint', function() { document.body.style.display = 'none'; });
+    window.addEventListener('afterprint', function() { document.body.style.display = 'block'; });
 
     // Night Mode
     function initNightMode() {
@@ -936,6 +962,10 @@ const buildViewerHtml = (pdfJsSource: string, pdfWorkerSource: string) => `
 
       currentPage = startPage;
       updateNavState();
+      if (window.__USER_WATERMARK__) {
+        var wmEl = document.getElementById('wm-user-text');
+        if (wmEl) wmEl.textContent = window.__USER_WATERMARK__ + ' • SSC Board';
+      }
       renderPage(currentPage);
     }
 
@@ -953,6 +983,7 @@ const buildViewerHtml = (pdfJsSource: string, pdfWorkerSource: string) => `
 
 const PdfDisplayScreen: React.FC<Props> = ({ route, navigation }) => {
   const { pdfUrl, title } = route.params;
+  const { user } = useAuth();
   const [viewerReady, setViewerReady] = useState(false);
   const [loading, setLoading] = useState(true);
   const [downloadStatus, setDownloadStatus] = useState<string>('Preparing Book Reader...');
@@ -1063,6 +1094,7 @@ const PdfDisplayScreen: React.FC<Props> = ({ route, navigation }) => {
     window.__PDF_FULL_URI__ = ${JSON.stringify(localPdfUri || '')};
     window.__PDF_CLOUD_URL__ = ${JSON.stringify(cloudPdfUrl || '')};
     window.__PDF_FILE_URI__ = ${JSON.stringify(pdfUrl || '')};
+    window.__USER_WATERMARK__ = ${JSON.stringify(user?.full_name || user?.username || 'SSC Student')};
     true;
   `;
 

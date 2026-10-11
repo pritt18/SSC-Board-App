@@ -19,6 +19,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS } from '../../constants/colors';
 import { LearningStackParamList } from '../../navigation/navigationTypes';
 import { resolveFileUri } from '../../utils/fileStorage';
+import { resolvePdfSource } from '../../utils/pdfResolver';
 import { executeQuery } from '../../database/database';
 import { useAuth } from '../../context/AuthContext';
 
@@ -121,7 +122,7 @@ const PdfDisplayScreen: React.FC<Props> = ({ route, navigation }) => {
 
   // -----------------------------------------------------------
   // SECURITY RESTRICTIONS:
-  // Anti-download, Anti-save, Anti-screenshot, Anti-print on Web
+  // Anti-download, Anti-save, Anti-screenshot, Anti-print, Anti-inspect on Web
   // -----------------------------------------------------------
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -132,30 +133,84 @@ const PdfDisplayScreen: React.FC<Props> = ({ route, navigation }) => {
       return false;
     };
 
-    // Block keyboard shortcuts (Ctrl+S, Ctrl+P, Ctrl+U, PrintScreen, Ctrl+C)
+    // Prevent dragging elements
+    const handleDragStart = (e: DragEvent) => {
+      e.preventDefault();
+      return false;
+    };
+
+    const wipeClipboard = () => {
+      try {
+        if (navigator.clipboard?.writeText) {
+          navigator.clipboard.writeText('');
+        }
+      } catch (err) {}
+    };
+
+    // Block keyboard shortcuts (Save, Print, View Source, Copy, Cut, DevTools, Inspect, Screen Grab)
     const handleKeyDown = (e: KeyboardEvent) => {
+      const key = e.key.toLowerCase();
+      // Ctrl/Cmd + S, P, U, C, X, A
+      if ((e.ctrlKey || e.metaKey) && ['s', 'p', 'u', 'c', 'x', 'a'].includes(key)) {
+        e.preventDefault();
+        return false;
+      }
+      // F12 or DevTools: Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+Shift+S
       if (
-        (e.ctrlKey || e.metaKey) &&
-        (e.key === 's' || e.key === 'p' || e.key === 'u' || e.key === 'c')
+        e.key === 'F12' ||
+        ((e.ctrlKey || e.metaKey) && e.shiftKey && ['i', 'j', 'c', 's'].includes(key))
       ) {
         e.preventDefault();
         return false;
       }
       if (e.key === 'PrintScreen') {
-        try {
-          if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText('');
-          }
-        } catch (err) {}
+        wipeClipboard();
       }
     };
 
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'PrintScreen') {
+        wipeClipboard();
+      }
+    };
+
+    // Prevent Print dialog
+    const handleBeforePrint = () => {
+      if (containerRef.current) containerRef.current.style.visibility = 'hidden';
+    };
+    const handleAfterPrint = () => {
+      if (containerRef.current) containerRef.current.style.visibility = 'visible';
+    };
+
     window.addEventListener('contextmenu', handleContextMenu);
+    window.addEventListener('dragstart', handleDragStart);
     window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('beforeprint', handleBeforePrint);
+    window.addEventListener('afterprint', handleAfterPrint);
+
+    // Inject Print Killer CSS
+    const printShield = document.createElement('style');
+    printShield.id = 'ssc-pdf-print-shield';
+    printShield.innerHTML = `
+      @media print {
+        body, html, #root, * {
+          display: none !important;
+          visibility: hidden !important;
+        }
+      }
+    `;
+    document.head.appendChild(printShield);
 
     return () => {
       window.removeEventListener('contextmenu', handleContextMenu);
+      window.removeEventListener('dragstart', handleDragStart);
       window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('beforeprint', handleBeforePrint);
+      window.removeEventListener('afterprint', handleAfterPrint);
+      const el = document.getElementById('ssc-pdf-print-shield');
+      if (el) el.remove();
     };
   }, []);
 
@@ -225,13 +280,16 @@ const PdfDisplayScreen: React.FC<Props> = ({ route, navigation }) => {
 
   const getTargetUrl = async (rawUrl: string): Promise<string> => {
     if (!rawUrl) throw new Error('PDF URL is missing.');
+    const resolved = resolvePdfSource(rawUrl, title);
+    if (resolved?.downloadUrl) {
+      return resolved.downloadUrl;
+    }
     if (rawUrl.startsWith('idb://')) {
       return await resolveFileUri(rawUrl);
     }
-    // Check if it's a Google Drive link or ID
     const driveMatch = rawUrl.match(/(?:drive\.google\.com\/(?:file\/d\/|open\?id=)|id=)([a-zA-Z0-9_-]+)/);
     if (driveMatch) {
-      return `/api/drive-pdf?id=${driveMatch[1]}`;
+      return `https://drive.usercontent.google.com/download?id=${driveMatch[1]}&export=download`;
     }
     if (
       rawUrl.startsWith('blob:') ||
@@ -240,7 +298,7 @@ const PdfDisplayScreen: React.FC<Props> = ({ route, navigation }) => {
     ) {
       return rawUrl;
     }
-    return `/api/pdf-content?file=${encodeURIComponent(rawUrl)}`;
+    return rawUrl;
   };
 
   // Render single active page with book card styling
@@ -298,6 +356,40 @@ const PdfDisplayScreen: React.FC<Props> = ({ route, navigation }) => {
         canvas.style.display = 'block';
 
         pageCard.appendChild(canvas);
+
+        // Security Forensic Watermark Overlay
+        const watermarkDiv = document.createElement('div');
+        watermarkDiv.style.position = 'absolute';
+        watermarkDiv.style.inset = '0';
+        watermarkDiv.style.pointerEvents = 'none';
+        watermarkDiv.style.display = 'flex';
+        watermarkDiv.style.flexDirection = 'column';
+        watermarkDiv.style.justifyContent = 'center';
+        watermarkDiv.style.alignItems = 'center';
+        watermarkDiv.style.transform = 'rotate(-25deg)';
+        watermarkDiv.style.opacity = '0.13';
+        watermarkDiv.style.zIndex = '5';
+        watermarkDiv.style.userSelect = 'none';
+        const studentLabel = user?.full_name || user?.username || 'SSC Student';
+        watermarkDiv.innerHTML = `
+          <span style="font-size: 20px; font-weight: 800; color: ${isDark ? '#ffffff' : '#000000'}; letter-spacing: 1.5px; text-transform: uppercase;">
+            ${studentLabel} • SSC Board
+          </span>
+          <span style="font-size: 11px; font-weight: 700; color: ${isDark ? '#cbd5e1' : '#334155'}; margin-top: 6px;">
+            PROTECTED EDUCATIONAL CONTENT • STRICTLY CONFIDENTIAL
+          </span>
+        `;
+        pageCard.appendChild(watermarkDiv);
+
+        // Invisible protective shield over canvas to prevent right-click "Save Image As"
+        const shieldDiv = document.createElement('div');
+        shieldDiv.style.position = 'absolute';
+        shieldDiv.style.inset = '0';
+        shieldDiv.style.zIndex = '6';
+        shieldDiv.style.backgroundColor = 'transparent';
+        shieldDiv.oncontextmenu = (e) => { e.preventDefault(); return false; };
+        pageCard.appendChild(shieldDiv);
+
         container.appendChild(pageCard);
 
         const ctx = canvas.getContext('2d');
