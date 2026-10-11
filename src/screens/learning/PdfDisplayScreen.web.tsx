@@ -85,6 +85,59 @@ const loadCdnFallback = (): Promise<any> => {
   });
 };
 
+// -----------------------------------------------------------
+// OFFLINE BOOK CACHING (IndexedDB for Web)
+// -----------------------------------------------------------
+const openPdfCacheDb = (): Promise<IDBDatabase> => {
+  return new Promise((resolve, reject) => {
+    if (typeof indexedDB === 'undefined') {
+      reject(new Error('IndexedDB not supported'));
+      return;
+    }
+    const req = indexedDB.open('ssc_offline_textbooks_v1', 1);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains('books')) {
+        db.createObjectStore('books', { keyPath: 'id' });
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+};
+
+const getCachedPdfData = async (cacheKey: string): Promise<Uint8Array | null> => {
+  try {
+    const db = await openPdfCacheDb();
+    return new Promise((resolve) => {
+      const tx = db.transaction('books', 'readonly');
+      const store = tx.objectStore('books');
+      const req = store.get(cacheKey);
+      req.onsuccess = () => {
+        if (req.result && req.result.data) {
+          resolve(req.result.data);
+        } else {
+          resolve(null);
+        }
+      };
+      req.onerror = () => resolve(null);
+    });
+  } catch (e) {
+    return null;
+  }
+};
+
+const saveCachedPdfData = async (cacheKey: string, data: Uint8Array): Promise<void> => {
+  try {
+    const db = await openPdfCacheDb();
+    const tx = db.transaction('books', 'readwrite');
+    const store = tx.objectStore('books');
+    store.put({ id: cacheKey, data, cachedAt: Date.now() });
+  } catch (e) {
+    console.warn('Could not cache PDF to IndexedDB:', e);
+  }
+};
+
 const PdfDisplayScreen: React.FC<Props> = ({ route, navigation }) => {
   const { pdfUrl, title, pdfId } = (route.params as any) || {};
   const { user } = useAuth();
@@ -92,6 +145,7 @@ const PdfDisplayScreen: React.FC<Props> = ({ route, navigation }) => {
   const [loading, setLoading] = useState(true);
   const [statusMessage, setStatusMessage] = useState('Initializing book reader...');
   const [error, setError] = useState<string | null>(null);
+  const [retryTrigger, setRetryTrigger] = useState(0);
   
   // Book Reading states (1-by-1 manual page flip)
   const [currentPage, setCurrentPage] = useState(1);
@@ -278,27 +332,55 @@ const PdfDisplayScreen: React.FC<Props> = ({ route, navigation }) => {
     await AsyncStorage.setItem(`pdf_bookmarks_${pdfUrl}`, JSON.stringify(nextBookmarks));
   };
 
-  const getTargetUrl = async (rawUrl: string): Promise<string> => {
-    if (!rawUrl) throw new Error('PDF URL is missing.');
-    const resolved = resolvePdfSource(rawUrl, title);
-    if (resolved?.downloadUrl) {
-      return resolved.downloadUrl;
-    }
+  const getCandidateSources = async (rawUrl: string): Promise<string[]> => {
+    if (!rawUrl) return [];
+    const candidates: string[] = [];
+
+    // 1. IndexedDB local blob (if stored previously via file upload/cache)
     if (rawUrl.startsWith('idb://')) {
-      return await resolveFileUri(rawUrl);
+      try {
+        const localBlob = await resolveFileUri(rawUrl);
+        if (localBlob) candidates.push(localBlob);
+      } catch (e) {}
     }
-    const driveMatch = rawUrl.match(/(?:drive\.google\.com\/(?:file\/d\/|open\?id=)|id=)([a-zA-Z0-9_-]+)/);
-    if (driveMatch) {
-      return `https://drive.usercontent.google.com/download?id=${driveMatch[1]}&export=download`;
+
+    if (rawUrl.startsWith('blob:')) {
+      candidates.push(rawUrl);
     }
-    if (
-      rawUrl.startsWith('blob:') ||
-      rawUrl.startsWith('http://') ||
-      rawUrl.startsWith('https://')
-    ) {
-      return rawUrl;
+
+    // 2. Resolve Drive ID from textbook catalog or rawUrl
+    let driveId = '';
+    const resolved = resolvePdfSource(rawUrl, title);
+    if (resolved?.driveId) {
+      driveId = resolved.driveId;
+    } else {
+      const driveMatch = rawUrl.match(/(?:drive\.google\.com\/(?:file\/d\/|open\?id=)|id=)([a-zA-Z0-9_-]+)/);
+      if (driveMatch) {
+        driveId = driveMatch[1];
+      } else if (/^[a-zA-Z0-9_-]{25,50}$/.test(rawUrl)) {
+        driveId = rawUrl;
+      }
     }
-    return rawUrl;
+
+    if (driveId) {
+      // Primary: Metro / Web server proxy with full CORS headers
+      candidates.push(`/api/drive-pdf?id=${driveId}`);
+      // Fallback 1: CORS proxy for web
+      candidates.push(`https://api.allorigins.win/raw?url=${encodeURIComponent(`https://drive.google.com/uc?export=download&id=${driveId}`)}`);
+      // Fallback 2: Direct Google Drive usercontent
+      candidates.push(`https://drive.usercontent.google.com/download?id=${driveId}&export=download`);
+      // Fallback 3: Drive uc
+      candidates.push(`https://drive.google.com/uc?export=download&id=${driveId}`);
+    }
+
+    // 3. Direct HTTP(S) URL
+    if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) {
+      if (!candidates.includes(rawUrl)) {
+        candidates.push(rawUrl);
+      }
+    }
+
+    return candidates;
   };
 
   // Render single active page with book card styling
@@ -416,7 +498,7 @@ const PdfDisplayScreen: React.FC<Props> = ({ route, navigation }) => {
     [turnDirection]
   );
 
-  // Load document initially with Last Page Remember
+  // Load document initially with Last Page Remember & Offline IndexedDB Caching
   useEffect(() => {
     let cancelled = false;
 
@@ -429,18 +511,72 @@ const PdfDisplayScreen: React.FC<Props> = ({ route, navigation }) => {
         const pdfjs = await ensurePdfJsLoaded();
         if (cancelled) return;
 
-        setStatusMessage('Opening textbook...');
-        const targetUrl = await getTargetUrl(pdfUrl);
+        // Compute unique cache key for offline storage
+        const resolved = resolvePdfSource(pdfUrl, title);
+        const cacheKey = `pdf_book_${resolved?.driveId || pdfUrl || title || 'default'}`;
+
+        let doc: any = null;
+
+        // 1. Check Offline IndexedDB Cache first (enables 100% offline viewing on Web!)
+        setStatusMessage('Checking offline storage...');
+        const cachedBytes = await getCachedPdfData(cacheKey);
         if (cancelled) return;
 
-        setStatusMessage('Reading pages...');
-        const loadingTask = pdfjs.getDocument({
-          url: targetUrl,
-          cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
-          cMapPacked: true,
-        });
+        if (cachedBytes && cachedBytes.length > 5000) {
+          try {
+            setStatusMessage('Opening book from offline storage...');
+            const loadingTask = pdfjs.getDocument({
+              data: cachedBytes,
+              cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
+              cMapPacked: true,
+            });
+            doc = await loadingTask.promise;
+          } catch (cachedErr) {
+            console.warn('Failed loading cached PDF, falling back to network sources:', cachedErr);
+            doc = null;
+          }
+        }
 
-        const doc = await loadingTask.promise;
+        // 2. If not in offline cache, fetch through candidate sources
+        if (!doc) {
+          const sources = await getCandidateSources(pdfUrl);
+          if (sources.length === 0) {
+            throw new Error('PDF source could not be resolved.');
+          }
+
+          let lastErr: any = null;
+          for (let i = 0; i < sources.length; i++) {
+            if (cancelled) return;
+            const srcUrl = sources[i];
+            try {
+              setStatusMessage(`Opening textbook (source ${i + 1}/${sources.length})...`);
+              const loadingTask = pdfjs.getDocument({
+                url: srcUrl,
+                cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
+                cMapPacked: true,
+              });
+              doc = await loadingTask.promise;
+              if (doc) break;
+            } catch (srcErr: any) {
+              console.warn(`Source ${srcUrl} failed:`, srcErr);
+              lastErr = srcErr;
+            }
+          }
+
+          if (!doc) {
+            throw lastErr || new Error('Could not load the textbook.');
+          }
+
+          // 3. Cache in IndexedDB for subsequent 100% offline access
+          try {
+            doc.getData().then((dataBytes: Uint8Array) => {
+              if (dataBytes && dataBytes.length > 5000) {
+                saveCachedPdfData(cacheKey, dataBytes);
+              }
+            }).catch(() => {});
+          } catch (e) {}
+        }
+
         if (cancelled) return;
 
         pdfDocRef.current = doc;
@@ -492,7 +628,7 @@ const PdfDisplayScreen: React.FC<Props> = ({ route, navigation }) => {
         pdfDocRef.current = null;
       }
     };
-  }, [pdfUrl]);
+  }, [pdfUrl, retryTrigger]);
 
   // Re-render when nightMode toggles
   useEffect(() => {
@@ -762,12 +898,20 @@ const PdfDisplayScreen: React.FC<Props> = ({ route, navigation }) => {
           <Text style={styles.errorIcon}>📖</Text>
           <Text style={styles.errorTitle}>पुस्तक उघडता आले नाही</Text>
           <Text style={styles.errorText}>{error}</Text>
-          <Pressable
-            style={styles.retryButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Text style={styles.retryButtonText}>मागे जा (Go Back)</Text>
-          </Pressable>
+          <View style={{ flexDirection: 'row', gap: 12, marginTop: 4 }}>
+            <Pressable
+              style={[styles.retryButton, { backgroundColor: '#334155' }]}
+              onPress={() => navigation.goBack()}
+            >
+              <Text style={styles.retryButtonText}>मागे जा (Go Back)</Text>
+            </Pressable>
+            <Pressable
+              style={styles.retryButton}
+              onPress={() => setRetryTrigger((c) => c + 1)}
+            >
+              <Text style={styles.retryButtonText}>पुन्हा प्रयत्न करा (Retry)</Text>
+            </Pressable>
+          </View>
         </View>
       ) : (
         <View
