@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  BackHandler,
   Dimensions,
   Modal,
   Platform,
@@ -11,6 +12,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { AVPlaybackStatus, ResizeMode, Video } from 'expo-av';
@@ -32,7 +34,6 @@ import { subtitleAssets } from '../../../data/subtitleAssets';
 import { parseSrt, SubtitleCue } from '../../../utils/subtitleParser';
 import { resolveFileUri } from '../../../utils/fileStorage';
 
-const { width } = Dimensions.get('window');
 
 type Props = NativeStackScreenProps<any, 'VideoPlayer'>;
 
@@ -81,8 +82,37 @@ const playbackRates = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
 const VideoPlayerScreen: React.FC<Props> = ({ navigation, route }) => {
   const { subjectId, videoId: targetVideoId } = (route.params as any) || {};
   const { user } = useAuth();
+  const { width: windowWidth } = useWindowDimensions();
   const videoRef = useRef<Video>(null);
   const lastSavedPosition = useRef(0);
+  const [progressBarWidth, setProgressBarWidth] = useState(0);
+
+  // Landscape controls auto-hide
+  const [showLandscapeControls, setShowLandscapeControls] = useState(true);
+  const controlsTimeoutRef = useRef<any>(null);
+
+  const triggerLandscapeControls = useCallback(() => {
+    setShowLandscapeControls(true);
+    if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+    controlsTimeoutRef.current = setTimeout(() => {
+      setShowLandscapeControls(false);
+    }, 4500);
+  }, []);
+
+  const toggleLandscapeControls = useCallback(() => {
+    setShowLandscapeControls((prev) => {
+      if (!prev) {
+        if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+        controlsTimeoutRef.current = setTimeout(() => {
+          setShowLandscapeControls(false);
+        }, 4500);
+        return true;
+      } else {
+        if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+        return false;
+      }
+    });
+  }, []);
 
   // Core Video states
   const [videos, setVideos] = useState<VideoItem[]>([]);
@@ -691,17 +721,64 @@ const VideoPlayerScreen: React.FC<Props> = ({ navigation, route }) => {
   const toggleLandscape = async () => {
     try {
       setShowSpeedOptions(false);
+      if (Platform.OS === 'web' && typeof document !== 'undefined') {
+        if (document.fullscreenElement) {
+          await document.exitFullscreen?.();
+          setIsLandscape(false);
+        } else {
+          await document.documentElement.requestFullscreen?.();
+          setIsLandscape(true);
+          triggerLandscapeControls();
+        }
+        return;
+      }
+
       if (isLandscape) {
         await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
         setIsLandscape(false);
       } else {
         await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
         setIsLandscape(true);
+        triggerLandscapeControls();
       }
     } catch (error) {
-      console.error('Orientation error:', error);
+      console.warn('Orientation toggle error / fallback:', error);
+      setIsLandscape(!isLandscape);
     }
   };
+
+  // Listen for device orientation changes (e.g. user rotates phone physically)
+  useEffect(() => {
+    let sub: any = null;
+    try {
+      sub = ScreenOrientation.addOrientationChangeListener((evt) => {
+        const o = evt.orientationInfo.orientation;
+        const isLand =
+          o === ScreenOrientation.Orientation.LANDSCAPE_LEFT ||
+          o === ScreenOrientation.Orientation.LANDSCAPE_RIGHT;
+        setIsLandscape(isLand);
+        if (isLand) triggerLandscapeControls();
+      });
+    } catch (e) {}
+
+    return () => {
+      if (sub) ScreenOrientation.removeOrientationChangeListener(sub);
+      if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+    };
+  }, [triggerLandscapeControls]);
+
+  // Back button handling in landscape mode
+  useEffect(() => {
+    const onBackPress = () => {
+      if (isLandscape) {
+        toggleLandscape();
+        return true;
+      }
+      return false;
+    };
+    const handler = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => handler.remove();
+  }, [isLandscape]);
 
   useFocusEffect(
     useCallback(() => {
@@ -746,7 +823,10 @@ const VideoPlayerScreen: React.FC<Props> = ({ navigation, route }) => {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView
+      style={[styles.container, isLandscape && styles.containerLandscape]}
+      edges={isLandscape ? [] : ['top']}
+    >
       {/* Toast Notification */}
       {toastMessage && (
         <View style={styles.toastContainer}>
@@ -754,8 +834,8 @@ const VideoPlayerScreen: React.FC<Props> = ({ navigation, route }) => {
         </View>
       )}
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-        {/* Header Bar */}
+      {/* Header Bar (Portrait only) */}
+      {!isLandscape && (
         <View style={styles.header}>
           <TouchableOpacity style={styles.headerBackButton} onPress={() => navigation.goBack()}>
             <Ionicons name="arrow-back" size={24} color="#0F172A" />
@@ -787,53 +867,222 @@ const VideoPlayerScreen: React.FC<Props> = ({ navigation, route }) => {
             </TouchableOpacity>
           </View>
         </View>
+      )}
 
-        {/* Video Player Container */}
-        <View style={[styles.videoContainer, isLandscape && styles.videoLandscape]}>
-          <Video
-            ref={videoRef}
-            key={selectedVideo.id}
-            source={videoSource || { uri: selectedVideo.video_url }}
-            style={styles.video}
-            resizeMode={ResizeMode.CONTAIN}
-            useNativeControls={false}
-            shouldPlay={false}
-            positionMillis={resumePosition}
-            rate={playbackRate}
-            shouldCorrectPitch
-            progressUpdateIntervalMillis={500}
-            onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
-            onError={(e) => console.warn('Video playback error:', e)}
-            onFullscreenUpdate={async ({ fullscreenUpdate }) => {
-              if (fullscreenUpdate === 3) {
-                try {
-                  await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
-                  setIsLandscape(false);
-                } catch (error) {
-                  console.error('Portrait orientation error:', error);
-                }
-              }
-            }}
-          />
+      {/* Video Player Container (Never unmounts across orientation changes!) */}
+      <View
+        style={[
+          styles.videoContainer,
+          isLandscape ? styles.videoContainerLandscape : styles.videoContainerPortrait,
+        ]}
+      >
+        <Video
+          ref={videoRef}
+          key={selectedVideo.id}
+          source={videoSource || { uri: selectedVideo.video_url }}
+          style={styles.video}
+          resizeMode={ResizeMode.CONTAIN}
+          useNativeControls={false}
+          shouldPlay={false}
+          positionMillis={resumePosition}
+          rate={playbackRate}
+          shouldCorrectPitch
+          progressUpdateIntervalMillis={500}
+          onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
+          onError={(e) => console.warn('Video playback error:', e)}
+        />
 
-          {/* Big Center Play Overlay when paused */}
-          {!isPlaying && (
-            <TouchableOpacity
-              style={styles.playOverlay}
-              onPress={togglePlayPause}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="play-circle" size={72} color="rgba(255,255,255,0.9)" />
-            </TouchableOpacity>
-          )}
+        {/* Big Center Play Overlay when paused */}
+        {!isPlaying && (
+          <TouchableOpacity
+            style={styles.playOverlay}
+            onPress={togglePlayPause}
+            activeOpacity={0.8}
+          >
+            <Ionicons
+              name="play-circle"
+              size={isLandscape ? 84 : 72}
+              color="rgba(255,255,255,0.9)"
+            />
+          </TouchableOpacity>
+        )}
 
-          {/* Subtitle Overlay */}
-          {subtitlesEnabled && currentSubtitle !== '' && (
-            <View pointerEvents="none" style={styles.subtitleOverlay}>
-              <Text style={styles.subtitleText}>{currentSubtitle}</Text>
-            </View>
-          )}
-        </View>
+        {/* Subtitle Overlay */}
+        {subtitlesEnabled && currentSubtitle !== '' && (
+          <View pointerEvents="none" style={styles.subtitleOverlay}>
+            <Text style={styles.subtitleText}>{currentSubtitle}</Text>
+          </View>
+        )}
+
+        {/* Landscape Floating Fullscreen Controls Overlay */}
+        {isLandscape && (
+          <Pressable
+            style={styles.landscapeTouchArea}
+            onPress={toggleLandscapeControls}
+          >
+            {showLandscapeControls && (
+              <View style={styles.landscapeControlsOverlay}>
+                {/* Top Bar in Landscape */}
+                <View style={styles.landscapeTopBar}>
+                  <TouchableOpacity
+                    style={styles.landscapeBackBtn}
+                    onPress={toggleLandscape}
+                  >
+                    <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+                  </TouchableOpacity>
+                  <Text style={styles.landscapeTitle} numberOfLines={1}>
+                    {selectedVideo.title_english}
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.landscapeActionBtn}
+                    onPress={() => setShowBookmarksModal(true)}
+                  >
+                    <Ionicons
+                      name={videoBookmarks.length > 0 ? 'bookmark' : 'bookmark-outline'}
+                      size={22}
+                      color={videoBookmarks.length > 0 ? '#F59E0B' : '#FFFFFF'}
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Bottom Controls Bar in Landscape */}
+                <View style={styles.landscapeBottomBar}>
+                  {/* Speed menu in landscape */}
+                  {showSpeedOptions && (
+                    <View style={styles.speedMenuLandscape}>
+                      {playbackRates.map((rate) => (
+                        <TouchableOpacity
+                          key={rate}
+                          style={[
+                            styles.speedOption,
+                            playbackRate === rate && styles.speedOptionActive,
+                          ]}
+                          onPress={() => changePlaybackRate(rate)}
+                        >
+                          <Text
+                            style={[
+                              styles.speedOptionText,
+                              playbackRate === rate && styles.speedOptionTextActive,
+                            ]}
+                          >
+                            {rate}x
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+
+                  {/* Progress Bar in Landscape */}
+                  <View style={styles.progressContainerLandscape}>
+                    <Text style={styles.timeText}>{formatTime(currentPosition)}</Text>
+                    <Pressable
+                      style={styles.progressBar}
+                      onLayout={(e) => setProgressBarWidth(e.nativeEvent.layout.width)}
+                      onPress={(e) => {
+                        if (currentDuration > 0) {
+                          const bw = progressBarWidth || (windowWidth - 140);
+                          const ratio = Math.max(0, Math.min(1, e.nativeEvent.locationX / bw));
+                          handleSeek(ratio * currentDuration);
+                        }
+                      }}
+                    >
+                      <View
+                        style={[
+                          styles.progressFill,
+                          {
+                            width: `${
+                              currentDuration > 0 ? (currentPosition / currentDuration) * 100 : 0
+                            }%`,
+                          },
+                        ]}
+                      />
+                    </Pressable>
+                    <Text style={styles.timeText}>{formatTime(currentDuration)}</Text>
+                  </View>
+
+                  {/* Action buttons row in Landscape */}
+                  <View style={styles.controlsLandscape}>
+                    <TouchableOpacity
+                      style={styles.controlButton}
+                      onPress={() => handleSeek(Math.max(0, currentPosition - 10000))}
+                    >
+                      <Ionicons name="play-back" size={22} color={COLORS.white} />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity style={styles.playButton} onPress={togglePlayPause}>
+                      <Ionicons
+                        name={isPlaying ? 'pause' : 'play'}
+                        size={28}
+                        color={COLORS.white}
+                      />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.controlButton}
+                      onPress={() => handleSeek(Math.min(currentDuration, currentPosition + 10000))}
+                    >
+                      <Ionicons name="play-forward" size={22} color={COLORS.white} />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.controlButton,
+                        playbackRate !== 1.0 && styles.controlButtonActive,
+                      ]}
+                      onPress={() => setShowSpeedOptions(!showSpeedOptions)}
+                    >
+                      <Text
+                        style={[
+                          styles.speedText,
+                          playbackRate !== 1.0 && styles.speedTextActive,
+                        ]}
+                      >
+                        {playbackRate}x
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.controlButton,
+                        subtitlesEnabled && styles.controlButtonActive,
+                      ]}
+                      onPress={toggleSubtitles}
+                    >
+                      <Ionicons
+                        name="chatbox-ellipses-outline"
+                        size={20}
+                        color={subtitlesEnabled ? '#38BDF8' : COLORS.white}
+                      />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.controlButton,
+                        isCurrentBookmarked && styles.controlButtonActive,
+                      ]}
+                      onPress={addBookmarkAtCurrentTime}
+                    >
+                      <Ionicons
+                        name={isCurrentBookmarked ? 'bookmark' : 'bookmark-outline'}
+                        size={20}
+                        color={isCurrentBookmarked ? '#F59E0B' : COLORS.white}
+                      />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity style={styles.controlButton} onPress={toggleLandscape}>
+                      <Ionicons name="contract" size={22} color={COLORS.white} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            )}
+          </Pressable>
+        )}
+      </View>
+
+      {/* Main Content (Portrait only) */}
+      {!isLandscape && (
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
 
         {/* Interactive Resume Banner */}
         {showResumePrompt && resumePosition > 5000 && (
@@ -956,11 +1205,12 @@ const VideoPlayerScreen: React.FC<Props> = ({ navigation, route }) => {
           <Text style={styles.timeText}>{formatTime(currentPosition)}</Text>
           <Pressable
             style={styles.progressBar}
+            onLayout={(e) => setProgressBarWidth(e.nativeEvent.layout.width)}
             onPress={(e) => {
               if (currentDuration > 0) {
+                const bw = progressBarWidth || (windowWidth - 120);
                 const clickX = e.nativeEvent.locationX;
-                const barWidth = width - 120;
-                const ratio = Math.max(0, Math.min(1, clickX / barWidth));
+                const ratio = Math.max(0, Math.min(1, clickX / bw));
                 handleSeek(ratio * currentDuration);
               }
             }}
@@ -1112,6 +1362,7 @@ const VideoPlayerScreen: React.FC<Props> = ({ navigation, route }) => {
           </View>
         )}
       </ScrollView>
+      )}
 
       {/* Bookmarks Modal */}
       <Modal
@@ -1258,8 +1509,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8FAFC',
   },
+  containerLandscape: {
+    flex: 1,
+    backgroundColor: '#000000',
+  },
   content: {
     paddingBottom: 40,
+    maxWidth: Platform.OS === 'web' ? 1040 : undefined,
+    width: '100%',
+    alignSelf: 'center',
   },
   toastContainer: {
     position: 'absolute',
@@ -1329,6 +1587,9 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
+    maxWidth: Platform.OS === 'web' ? 1040 : undefined,
+    width: '100%',
+    alignSelf: 'center',
   },
   headerBackButton: {
     padding: 4,
@@ -1357,16 +1618,97 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor: '#000000',
     position: 'relative',
-    aspectRatio: 16 / 9,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  videoLandscape: {
+  videoContainerPortrait: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' ? 1040 : undefined,
+    alignSelf: 'center',
+    aspectRatio: 16 / 9,
+    borderRadius: Platform.OS === 'web' ? 12 : 0,
+    overflow: 'hidden',
+  },
+  videoContainerLandscape: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+    maxWidth: undefined,
     aspectRatio: undefined,
-    height: 280,
+    zIndex: 999,
+    backgroundColor: '#000000',
   },
   video: {
     width: '100%',
     height: '100%',
     backgroundColor: '#000000',
+  },
+  landscapeTouchArea: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 10,
+  },
+  landscapeControlsOverlay: {
+    flex: 1,
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  landscapeTopBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'ios' ? 20 : 12,
+    paddingBottom: 12,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+  },
+  landscapeBackBtn: {
+    padding: 6,
+    marginRight: 10,
+  },
+  landscapeTitle: {
+    flex: 1,
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  landscapeActionBtn: {
+    padding: 6,
+    marginLeft: 10,
+  },
+  landscapeBottomBar: {
+    backgroundColor: 'rgba(0,0,0,0.75)',
+    paddingBottom: Platform.OS === 'ios' ? 24 : 12,
+    paddingTop: 8,
+  },
+  progressContainerLandscape: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 6,
+    gap: 12,
+  },
+  controlsLandscape: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 16,
+    paddingTop: 4,
+  },
+  speedMenuLandscape: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(15,23,42,0.9)',
   },
   playOverlay: {
     position: 'absolute',

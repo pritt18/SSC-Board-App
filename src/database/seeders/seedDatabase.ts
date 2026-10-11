@@ -664,7 +664,9 @@ export const seedDatabase = async () => {
       }
       subjectId = subjectRows[0].id;
 
-      const pdfUrl = `file:///E:/SoftspireSolution/Document/ssc book content/${book.relativePath}`;
+      const pdfUrl = book.driveId
+        ? `https://drive.usercontent.google.com/download?id=${book.driveId}&export=download`
+        : `file:///E:/SoftspireSolution/Document/ssc book content/${book.relativePath}`;
 
       const existingPdf = await executeQuery(
         `SELECT id FROM pdfs WHERE subject_id = ? AND (title_english = ? OR pdf_url = ?) LIMIT 1`,

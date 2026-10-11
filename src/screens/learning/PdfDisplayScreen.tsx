@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, Text, Pressable, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, Text, Pressable, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { WebView } from 'react-native-webview';
@@ -9,6 +9,7 @@ import * as ScreenCapture from '../../utils/safeScreenCapture';
 
 import { COLORS } from '../../constants/colors';
 import { LearningStackParamList } from '../../navigation/navigationTypes';
+import { resolvePdfSource } from '../../utils/pdfResolver';
 
 type Props = NativeStackScreenProps<LearningStackParamList, 'PdfDisplay'>;
 
@@ -18,7 +19,7 @@ const PDFJS_LIB_ASSET = require('../../../assets/pdfjs/pdf.min.js.txt');
 const PDFJS_WORKER_ASSET = require('../../../assets/pdfjs/pdf.worker.min.js.txt');
 
 // Upgraded versioned path to ensure cache refresh
-const VIEWER_HTML_PATH = FileSystem.documentDirectory + 'pdf_book_viewer_v3.html';
+const VIEWER_HTML_PATH = FileSystem.documentDirectory + 'pdf_book_viewer_v5.html';
 
 const buildViewerHtml = (pdfJsSource: string, pdfWorkerSource: string) => `
 <!DOCTYPE html>
@@ -117,6 +118,8 @@ const buildViewerHtml = (pdfJsSource: string, pdfWorkerSource: string) => `
       display: flex;
       justify-content: center;
       align-items: center;
+      min-width: 200px;
+      min-height: 260px;
       transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s ease;
     }
     canvas {
@@ -214,10 +217,11 @@ const buildViewerHtml = (pdfJsSource: string, pdfWorkerSource: string) => `
       font-weight: bold;
     }
     #status-overlay {
-      color: #ffffff;
-      font-size: 15px;
+      color: #1e293b;
+      font-size: 14px;
+      font-weight: 600;
       text-align: center;
-      padding: 30px;
+      padding: 24px;
     }
     .flip-next {
       animation: animFlipNext 0.22s ease-out;
@@ -842,42 +846,106 @@ const buildViewerHtml = (pdfJsSource: string, pdfWorkerSource: string) => `
       }
     }, { passive: true });
 
-    async function initPdf(fileUri) {
-      try {
-        currentFileUri = fileUri || '';
-        initNightMode();
-        loadBookmarks();
+    function fetchArrayBuffer(targetUrl) {
+      return new Promise(function(resolve, reject) {
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', targetUrl, true);
+        xhr.responseType = 'arraybuffer';
+        xhr.onload = function() {
+          if ((xhr.status === 200 || xhr.status === 0) && xhr.response && xhr.response.byteLength > 0) {
+            resolve(xhr.response);
+          } else {
+            reject(new Error('Status ' + xhr.status));
+          }
+        };
+        xhr.onerror = function(e) { reject(e || new Error('XHR error')); };
+        xhr.ontimeout = function() { reject(new Error('Timeout')); };
+        xhr.timeout = 35000;
+        xhr.send();
+      });
+    }
 
-        statusEl.textContent = 'पुस्तक उघडत आहे...';
-        pdfDoc = await pdfjsLib.getDocument({ url: fileUri }).promise;
-        totalPages = pdfDoc.numPages;
+    async function initPdf() {
+      var targets = [
+        window.__PDF_LOCAL_URI__,
+        window.__PDF_FULL_URI__,
+        window.__PDF_CLOUD_URL__,
+        window.__PDF_FILE_URI__
+      ].filter(Boolean);
 
-        // Restore last remembered page
-        var startPage = 1;
+      currentFileUri = window.__PDF_FILE_URI__ || (targets[0] || 'doc');
+      initNightMode();
+      loadBookmarks();
+
+      var loaded = false;
+      for (var i = 0; i < targets.length; i++) {
+        var tUrl = targets[i];
         try {
-          var saved = localStorage.getItem(getStorageKey('last_page'));
-          if (saved) {
-            var p = parseInt(saved, 10);
-            if (!isNaN(p) && p >= 1 && p <= totalPages) {
-              startPage = p;
-              if (startPage > 1) {
-                showToast('पुन्हा सुरू केले: पान ' + startPage + ' वरून');
-              }
+          statusEl.textContent = 'पुस्तक उघडत आहे... (' + (i + 1) + '/' + targets.length + ')';
+
+          // 1. Try loading via XHR ArrayBuffer (works seamlessly for local file:// in WebView)
+          try {
+            var buf = await fetchArrayBuffer(tUrl);
+            if (buf && buf.byteLength > 0) {
+              pdfDoc = await pdfjsLib.getDocument({
+                data: buf,
+                cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
+                cMapPacked: true
+              }).promise;
+              totalPages = pdfDoc.numPages;
+              loaded = true;
+              break;
+            }
+          } catch (bufErr) {
+            console.warn('ArrayBuffer load failed for: ' + tUrl, bufErr);
+          }
+
+          // 2. Fallback to direct URL
+          pdfDoc = await pdfjsLib.getDocument({
+            url: tUrl,
+            cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
+            cMapPacked: true
+          }).promise;
+          totalPages = pdfDoc.numPages;
+          loaded = true;
+          break;
+        } catch (err) {
+          console.warn('PDF target failed: ' + tUrl, err);
+        }
+      }
+
+      if (!loaded || !pdfDoc) {
+        statusEl.textContent = 'पुस्तक उघडता आले नाही. कृपया इंटरनेट तपासा.';
+        return;
+      }
+
+      // Restore last remembered page
+      var startPage = 1;
+      try {
+        var saved = localStorage.getItem(getStorageKey('last_page'));
+        if (saved) {
+          var p = parseInt(saved, 10);
+          if (!isNaN(p) && p >= 1 && p <= totalPages) {
+            startPage = p;
+            if (startPage > 1) {
+              showToast('पुन्हा सुरू केले: पान ' + startPage + ' वरून');
             }
           }
-        } catch(e){}
+        }
+      } catch(e){}
 
-        currentPage = startPage;
-        updateNavState();
-        renderPage(currentPage);
-      } catch (err) {
-        statusEl.textContent = 'पुस्तक उघडता आले नाही: ' + (err ? err.message : '');
-      }
+      currentPage = startPage;
+      updateNavState();
+      renderPage(currentPage);
     }
 
-    if (window.__PDF_FILE_URI__) {
-      initPdf(window.__PDF_FILE_URI__);
-    }
+    window.addEventListener('DOMContentLoaded', function() {
+      initPdf();
+    });
+    // Fallback if DOM is already ready
+    setTimeout(function() {
+      if (!pdfDoc) initPdf();
+    }, 150);
   </script>
 </body>
 </html>
@@ -887,7 +955,11 @@ const PdfDisplayScreen: React.FC<Props> = ({ route, navigation }) => {
   const { pdfUrl, title } = route.params;
   const [viewerReady, setViewerReady] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [downloadStatus, setDownloadStatus] = useState<string>('Preparing Book Reader...');
   const [error, setError] = useState<string | null>(null);
+
+  const [localPdfUri, setLocalPdfUri] = useState<string | null>(null);
+  const [cloudPdfUrl, setCloudPdfUrl] = useState<string | null>(null);
 
   useEffect(() => {
     ScreenCapture.preventScreenCaptureAsync().catch(() => {});
@@ -897,15 +969,20 @@ const PdfDisplayScreen: React.FC<Props> = ({ route, navigation }) => {
   }, []);
 
   useEffect(() => {
+    let isMounted = true;
+
     const prepare = async () => {
       if (!pdfUrl) {
-        setError('No PDF file was found for this item.');
-        setLoading(false);
+        if (isMounted) {
+          setError('No PDF file was found for this item.');
+          setLoading(false);
+        }
         return;
       }
       try {
-        setLoading(true);
+        if (isMounted) setLoading(true);
 
+        // 1. Prepare offline viewer HTML file
         const alreadyBuilt = await FileSystem.getInfoAsync(VIEWER_HTML_PATH);
         if (!alreadyBuilt.exists) {
           const [pdfJsAsset, pdfWorkerAsset] = await Asset.loadAsync([
@@ -926,19 +1003,66 @@ const PdfDisplayScreen: React.FC<Props> = ({ route, navigation }) => {
           );
         }
 
-        setViewerReady(true);
+        // 2. Resolve PDF Source (Maps Windows local path or Cloud driveId to Google Drive usercontent)
+        const resolved = resolvePdfSource(pdfUrl, title);
+        const cloudUrl = resolved?.downloadUrl || (pdfUrl.startsWith('http') ? pdfUrl : null);
+        if (isMounted) setCloudPdfUrl(cloudUrl);
+
+        // 3. Ensure offline cache directory exists
+        const cacheDir = FileSystem.documentDirectory + 'cached_pdfs/';
+        const dirInfo = await FileSystem.getInfoAsync(cacheDir);
+        if (!dirInfo.exists) {
+          await FileSystem.makeDirectoryAsync(cacheDir, { intermediates: true });
+        }
+
+        const safeFileName = resolved?.cacheFileName || (title ? title.replace(/[^a-zA-Z0-9_-]/g, '_') + '.pdf' : 'book.pdf');
+        const localTargetUri = cacheDir + safeFileName;
+
+        // 4. Check if already cached locally on device
+        const localCheck = await FileSystem.getInfoAsync(localTargetUri);
+        if (localCheck.exists && (localCheck.size || 0) > 10000) {
+          if (isMounted) {
+            setLocalPdfUri(localTargetUri);
+            setViewerReady(true);
+          }
+        } else if (cloudUrl) {
+          // Download to local cache for offline reading
+          if (isMounted) setDownloadStatus('Downloading textbook for offline access...');
+          try {
+            const downloadRes = await FileSystem.downloadAsync(cloudUrl, localTargetUri);
+            if (downloadRes.status === 200 && isMounted) {
+              setLocalPdfUri(downloadRes.uri);
+            }
+          } catch (dlErr) {
+            console.warn('Background download error, will stream directly:', dlErr);
+          }
+          if (isMounted) setViewerReady(true);
+        } else {
+          if (isMounted) {
+            setLocalPdfUri(pdfUrl);
+            setViewerReady(true);
+          }
+        }
       } catch (err) {
         console.error('Error preparing PDF viewer:', err);
-        setError('Failed to prepare the PDF viewer. Please try again.');
+        if (isMounted) setError('Failed to prepare the PDF viewer. Please try again.');
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
+
     prepare();
-  }, [pdfUrl]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [pdfUrl, title]);
 
   const injectedJavaScriptBeforeContentLoaded = `
-    window.__PDF_FILE_URI__ = ${JSON.stringify(pdfUrl)};
+    window.__PDF_LOCAL_URI__ = ${JSON.stringify(localPdfUri ? 'cached_pdfs/' + (localPdfUri.split('/').pop() || '') : '')};
+    window.__PDF_FULL_URI__ = ${JSON.stringify(localPdfUri || '')};
+    window.__PDF_CLOUD_URL__ = ${JSON.stringify(cloudPdfUrl || '')};
+    window.__PDF_FILE_URI__ = ${JSON.stringify(pdfUrl || '')};
     true;
   `;
 
@@ -956,7 +1080,7 @@ const PdfDisplayScreen: React.FC<Props> = ({ route, navigation }) => {
       {loading ? (
         <View style={styles.centerBox}>
           <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.statusText}>Preparing Book Reader...</Text>
+          <Text style={styles.statusText}>{downloadStatus}</Text>
         </View>
       ) : error || !viewerReady ? (
         <View style={styles.centerBox}>
@@ -1016,7 +1140,7 @@ const styles = StyleSheet.create({
     padding: 30,
     backgroundColor: '#0F172A',
   },
-  statusText: { marginTop: 14, color: '#94A3B8', fontSize: 14 },
+  statusText: { marginTop: 14, color: '#94A3B8', fontSize: 14, textAlign: 'center' },
   errorIcon: { fontSize: 50, marginBottom: 16 },
   errorTitle: { fontSize: 18, fontWeight: '700', color: '#F8FAFC', marginBottom: 8 },
   errorText: { fontSize: 13, color: '#94A3B8', textAlign: 'center', marginBottom: 20, lineHeight: 19 },
