@@ -15,6 +15,7 @@ import {
   Alert,
   Modal,
   Platform,
+  TextInput,
 } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -248,6 +249,106 @@ const UserDetailScreen: React.FC<Props> = ({
     resettingDevice,
     setResettingDevice,
   ] = useState(false);
+
+  const [showFullEditModal, setShowFullEditModal] = useState(false);
+  const [editFullName, setEditFullName] = useState('');
+  const [editUsername, setEditUsername] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editRole, setEditRole] = useState<string>('student');
+  const [editMedium, setEditMedium] = useState<string>('english');
+  const [editClassId, setEditClassId] = useState<number | null>(null);
+  const [editPassword, setEditPassword] = useState('');
+  const [savingFullProfile, setSavingFullProfile] = useState(false);
+  const [fullEditError, setFullEditError] = useState<string | null>(null);
+
+  const openFullEdit = () => {
+    if (!user) return;
+    setEditFullName(user.full_name || '');
+    setEditUsername(user.username || '');
+    setEditEmail(user.email || '');
+    setEditRole(user.role || 'student');
+    setEditMedium(user.medium || 'english');
+    setEditClassId(user.class_id || null);
+    setEditPassword('');
+    setFullEditError(null);
+    setShowFullEditModal(true);
+  };
+
+  const handleSaveFullProfile = async () => {
+    if (!user) return;
+    const trimmedName = editFullName.trim();
+    const trimmedUsername = editUsername.trim();
+    const trimmedEmail = editEmail.trim().toLowerCase();
+
+    if (!trimmedName) {
+      setFullEditError('Full name is required.');
+      return;
+    }
+    if (!trimmedUsername) {
+      setFullEditError('Username is required.');
+      return;
+    }
+    if (!trimmedEmail) {
+      setFullEditError('Email is required.');
+      return;
+    }
+
+    setSavingFullProfile(true);
+    setFullEditError(null);
+    try {
+      const emailRows = await executeQuery(
+        'SELECT id FROM users WHERE email = ? AND id != ? LIMIT 1',
+        [trimmedEmail, user.id]
+      );
+      if (emailRows && emailRows.length > 0) {
+        setFullEditError('Email is already taken by another account.');
+        setSavingFullProfile(false);
+        return;
+      }
+
+      const usernameRows = await executeQuery(
+        'SELECT id FROM users WHERE username = ? AND id != ? LIMIT 1',
+        [trimmedUsername, user.id]
+      );
+      if (usernameRows && usernameRows.length > 0) {
+        setFullEditError('Username is already taken by another account.');
+        setSavingFullProfile(false);
+        return;
+      }
+
+      if (editPassword.trim().length > 0 && editPassword.trim().length < 6) {
+        setFullEditError('New password must be at least 6 characters long.');
+        setSavingFullProfile(false);
+        return;
+      }
+
+      if (editPassword.trim().length >= 6) {
+        const newHash = btoa(editPassword.trim() + 'salt');
+        await executeQuery(
+          `UPDATE users 
+           SET full_name = ?, username = ?, email = ?, role = ?, medium = ?, class_id = ?, password_hash = ?, updated_at = CURRENT_TIMESTAMP 
+           WHERE id = ?`,
+          [trimmedName, trimmedUsername, trimmedEmail, editRole, editMedium, editClassId, newHash, user.id]
+        );
+      } else {
+        await executeQuery(
+          `UPDATE users 
+           SET full_name = ?, username = ?, email = ?, role = ?, medium = ?, class_id = ?, updated_at = CURRENT_TIMESTAMP 
+           WHERE id = ?`,
+          [trimmedName, trimmedUsername, trimmedEmail, editRole, editMedium, editClassId, user.id]
+        );
+      }
+
+      await loadUserData();
+      setShowFullEditModal(false);
+      Alert.alert('Success', 'User profile updated successfully.');
+    } catch (e: any) {
+      console.error('Error saving full profile:', e);
+      setFullEditError('Failed to save profile changes.');
+    } finally {
+      setSavingFullProfile(false);
+    }
+  };
 
 
   const [
@@ -1911,6 +2012,32 @@ const UserDetailScreen: React.FC<Props> = ({
             Actions
           </Text>
 
+          {/* ==================================================
+              EDIT ALL PROFILE FIELDS (ADMIN OVERRIDE)
+          ================================================== */}
+          <TouchableOpacity
+            style={[styles.actionButton, { borderColor: '#2563EB', backgroundColor: '#EFF6FF' }]}
+            onPress={openFullEdit}
+            disabled={deleting}
+          >
+            <Ionicons
+              name="create-outline"
+              size={20}
+              color="#2563EB"
+            />
+            <Text
+              style={[
+                styles.actionButtonText,
+                {
+                  color: '#2563EB',
+                  fontWeight: '700',
+                },
+              ]}
+            >
+              Edit All Profile Fields
+            </Text>
+          </TouchableOpacity>
+
 
           {/* ==================================================
               ASSIGN CLASS
@@ -2676,6 +2803,149 @@ const UserDetailScreen: React.FC<Props> = ({
 
         </View>
 
+      </Modal>
+
+      {/* ========================================================= */}
+      {/* FULL PROFILE EDIT MODAL (ADMIN) */}
+      {/* ========================================================= */}
+      <Modal
+        visible={showFullEditModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowFullEditModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { maxHeight: '90%', maxWidth: 540, width: '92%', padding: 0 }]}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Ionicons name="create" size={20} color="#2563EB" style={{ marginRight: 8 }} />
+                <Text style={{ fontSize: 18, fontWeight: '700', color: '#0F172A' }}>Edit User Profile</Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowFullEditModal(false)}>
+                <Ionicons name="close" size={24} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ padding: 16 }} showsVerticalScrollIndicator={false}>
+              {fullEditError && (
+                <View style={{ backgroundColor: '#FEF2F2', padding: 10, borderRadius: 8, marginBottom: 12, borderWidth: 1, borderColor: '#F87171' }}>
+                  <Text style={{ color: '#DC2626', fontSize: 13, fontWeight: '500' }}>{fullEditError}</Text>
+                </View>
+              )}
+
+              <Text style={{ fontSize: 13, fontWeight: '600', color: '#334155', marginBottom: 4 }}>Full Name *</Text>
+              <TextInput
+                style={{ borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 8, padding: 10, fontSize: 15, marginBottom: 12, color: '#0F172A', backgroundColor: '#FFF' }}
+                value={editFullName}
+                onChangeText={setEditFullName}
+                placeholder="Full Name"
+              />
+
+              <Text style={{ fontSize: 13, fontWeight: '600', color: '#334155', marginBottom: 4 }}>Username *</Text>
+              <TextInput
+                style={{ borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 8, padding: 10, fontSize: 15, marginBottom: 12, color: '#0F172A', backgroundColor: '#FFF' }}
+                value={editUsername}
+                onChangeText={setEditUsername}
+                placeholder="Username"
+                autoCapitalize="none"
+              />
+
+              <Text style={{ fontSize: 13, fontWeight: '600', color: '#334155', marginBottom: 4 }}>Email Address *</Text>
+              <TextInput
+                style={{ borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 8, padding: 10, fontSize: 15, marginBottom: 12, color: '#0F172A', backgroundColor: '#FFF' }}
+                value={editEmail}
+                onChangeText={setEditEmail}
+                placeholder="Email Address"
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+
+              <Text style={{ fontSize: 13, fontWeight: '600', color: '#334155', marginBottom: 6 }}>Role</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                {['student', 'teacher', 'parent', 'admin', 'distributor'].map((r) => {
+                  const sel = editRole === r;
+                  return (
+                    <TouchableOpacity
+                      key={r}
+                      style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: sel ? '#2563EB' : '#CBD5E1', backgroundColor: sel ? '#2563EB' : '#F8FAFC' }}
+                      onPress={() => setEditRole(r)}
+                    >
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: sel ? '#FFF' : '#475569', textTransform: 'capitalize' }}>{r}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <Text style={{ fontSize: 13, fontWeight: '600', color: '#334155', marginBottom: 6 }}>Medium</Text>
+              <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
+                <TouchableOpacity
+                  style={{ flex: 1, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: editMedium === 'english' ? '#2563EB' : '#CBD5E1', backgroundColor: editMedium === 'english' ? '#EFF6FF' : '#F8FAFC', alignItems: 'center' }}
+                  onPress={() => setEditMedium('english')}
+                >
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: editMedium === 'english' ? '#2563EB' : '#475569' }}>🇬🇧 English</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{ flex: 1, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: editMedium === 'marathi' ? '#2563EB' : '#CBD5E1', backgroundColor: editMedium === 'marathi' ? '#EFF6FF' : '#F8FAFC', alignItems: 'center' }}
+                  onPress={() => setEditMedium('marathi')}
+                >
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: editMedium === 'marathi' ? '#2563EB' : '#475569' }}>🇮🇳 मराठी</Text>
+                </TouchableOpacity>
+              </View>
+
+              <Text style={{ fontSize: 13, fontWeight: '600', color: '#334155', marginBottom: 6 }}>Assigned Class</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                <TouchableOpacity
+                  style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: editClassId === null ? '#2563EB' : '#CBD5E1', backgroundColor: editClassId === null ? '#2563EB' : '#F8FAFC' }}
+                  onPress={() => setEditClassId(null)}
+                >
+                  <Text style={{ fontSize: 12, fontWeight: '600', color: editClassId === null ? '#FFF' : '#475569' }}>None</Text>
+                </TouchableOpacity>
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((cls) => {
+                  const sel = editClassId === cls;
+                  return (
+                    <TouchableOpacity
+                      key={cls}
+                      style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: sel ? '#2563EB' : '#CBD5E1', backgroundColor: sel ? '#2563EB' : '#F8FAFC' }}
+                      onPress={() => setEditClassId(cls)}
+                    >
+                      <Text style={{ fontSize: 12, fontWeight: '600', color: sel ? '#FFF' : '#475569' }}>Class {cls}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <Text style={{ fontSize: 13, fontWeight: '600', color: '#334155', marginBottom: 4 }}>Reset Password (Optional)</Text>
+              <TextInput
+                style={{ borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 8, padding: 10, fontSize: 15, marginBottom: 16, color: '#0F172A', backgroundColor: '#FFF' }}
+                value={editPassword}
+                onChangeText={setEditPassword}
+                placeholder="Leave blank to keep current password"
+                secureTextEntry
+              />
+            </ScrollView>
+
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10, padding: 16, borderTopWidth: 1, borderTopColor: '#F1F5F9', backgroundColor: '#F8FAFC' }}>
+              <TouchableOpacity
+                style={{ paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, backgroundColor: '#E2E8F0' }}
+                onPress={() => setShowFullEditModal(false)}
+                disabled={savingFullProfile}
+              >
+                <Text style={{ fontSize: 14, fontWeight: '600', color: '#475569' }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{ paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8, backgroundColor: '#2563EB', alignItems: 'center', justifyContent: 'center' }}
+                onPress={handleSaveFullProfile}
+                disabled={savingFullProfile}
+              >
+                {savingFullProfile ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: '#FFF' }}>Save Changes</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
       </Modal>
 
     </SafeAreaView>

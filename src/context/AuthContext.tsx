@@ -154,7 +154,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateUser = async (userData: Partial<User>) => {
-    if (user) {
+    if (user?.id) {
+      try {
+        await UserModel.update(user.id, userData);
+      } catch (err) {
+        console.error('Error saving user update to database:', err);
+      }
       const updatedUser = { ...user, ...userData };
       setUser(updatedUser);
       await AsyncStorage.setItem('user', JSON.stringify(updatedUser));

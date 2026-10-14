@@ -7,6 +7,7 @@ import ParentProgressScreen from '../screens/parent/ParentProgressScreen';
 import ParentQuizResultsScreen from '../screens/parent/ParentQuizResultsScreen';
 import ParentStudyTimeScreen from '../screens/parent/ParentStudyTimeScreen';
 import ParentNotificationsScreen from '../screens/parent/ParentNotificationsScreen';
+import ProfileScreen from '../screens/student/profile/ProfileScreen';
 import { COLORS } from '../constants/colors';
 import { ParentChildProvider } from '../context/ParentChildContext';
 
@@ -53,6 +54,9 @@ const ParentNavigator: React.FC = () => {
               case 'ParentNotifications':
                 iconName = focused ? 'notifications' : 'notifications-outline';
                 break;
+              case 'Profile':
+                iconName = focused ? 'person' : 'person-outline';
+                break;
             }
 
             return <Ionicons name={iconName} size={size} color={color} />;
@@ -83,6 +87,11 @@ const ParentNavigator: React.FC = () => {
           name="ParentNotifications"
           component={ParentNotificationsScreen}
           options={{ tabBarLabel: 'Alerts' }}
+        />
+        <Tab.Screen
+          name="Profile"
+          component={ProfileScreen}
+          options={{ tabBarLabel: 'Profile' }}
         />
       </Tab.Navigator>
     </ParentChildProvider>

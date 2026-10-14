@@ -25,9 +25,11 @@ import AddSubjectScreen from '../screens/admin/AddSubjectScreen';
 import EditSubjectScreen from '../screens/admin/EditSubjectScreen';
 import PdfDisplayScreen from '../screens/learning/PdfDisplayScreen';
 import VideoPlayerScreen from '../screens/learning/videos/VideoPlayerScreen';
+import ProfileScreen from '../screens/student/profile/ProfileScreen';
 
 
 export type AdminStackParamList = {
+  Profile: undefined;
   AdminDashboard: undefined;
   ManageUsers: undefined;
   UserDetail: { userId: number };
@@ -87,6 +89,7 @@ const AdminNavigator: React.FC = () => {
       <Stack.Screen name="EditSubject" component={EditSubjectScreen} />
       <Stack.Screen name="PdfDisplay" component={PdfDisplayScreen} />
       <Stack.Screen name="VideoPlayer" component={VideoPlayerScreen} />
+      <Stack.Screen name="Profile" component={ProfileScreen} />
     </Stack.Navigator>
   );
 };

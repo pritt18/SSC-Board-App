@@ -285,14 +285,25 @@ const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
                 <Text style={styles.adminRole}>System Administrator</Text>
               </View>
               
-              {/* ✅ Logout Button in Header */}
-              <TouchableOpacity 
-                style={styles.logoutButton}
-                onPress={handleLogout}
-              >
-                <Ionicons name="log-out-outline" size={22} color={COLORS.white} />
-                <Text style={styles.logoutText}>Logout</Text>
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                {/* Profile Button in Header */}
+                <TouchableOpacity 
+                  style={styles.profileHeaderBtn}
+                  onPress={() => (navigation as any).navigate('Profile')}
+                >
+                  <Ionicons name="person-circle-outline" size={20} color={COLORS.white} />
+                  <Text style={styles.logoutText}>Profile</Text>
+                </TouchableOpacity>
+
+                {/* Logout Button in Header */}
+                <TouchableOpacity 
+                  style={styles.logoutButton}
+                  onPress={handleLogout}
+                >
+                  <Ionicons name="log-out-outline" size={20} color={COLORS.white} />
+                  <Text style={styles.logoutText}>Logout</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </View>
@@ -490,6 +501,15 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: 'rgba(255,255,255,0.7)',
     marginTop: 2,
+  },
+  profileHeaderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 6,
   },
   // ✅ Logout Button in Header
   logoutButton: {

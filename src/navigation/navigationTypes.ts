@@ -108,6 +108,7 @@ export type ParentTabParamList = {
   ParentQuizResults: undefined;
   ParentStudyTime: undefined;
   ParentNotifications: undefined;
+  Profile: undefined;
 };
 
 
@@ -121,6 +122,7 @@ export type TeacherTabParamList = {
   TeacherAssignmentsStack: undefined;
   TeacherReports: undefined;
   TeacherNotifications: undefined;
+  Profile: undefined;
 };
 
 

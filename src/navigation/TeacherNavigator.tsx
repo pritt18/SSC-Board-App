@@ -10,6 +10,7 @@ import TeacherAssignmentsScreen from '../screens/teacher/TeacherAssignmentsScree
 import TeacherCreateAssignmentScreen from '../screens/teacher/TeacherCreateAssignmentScreen';
 import TeacherReportsScreen from '../screens/teacher/TeacherReportsScreen';
 import TeacherNotificationsScreen from '../screens/teacher/TeacherNotificationsScreen';
+import ProfileScreen from '../screens/student/profile/ProfileScreen';
 import { COLORS } from '../constants/colors';
 
 import {
@@ -70,6 +71,9 @@ const TeacherNavigator: React.FC = () => {
             case 'TeacherNotifications':
               iconName = focused ? 'notifications' : 'notifications-outline';
               break;
+            case 'Profile':
+              iconName = focused ? 'person' : 'person-outline';
+              break;
           }
           return <Ionicons name={iconName} size={size} color={color} />;
         },
@@ -80,6 +84,7 @@ const TeacherNavigator: React.FC = () => {
       <Tab.Screen name="TeacherAssignmentsStack" component={AssignmentsStack} options={{ tabBarLabel: 'Assignments' }} />
       <Tab.Screen name="TeacherReports" component={TeacherReportsScreen} options={{ tabBarLabel: 'Reports' }} />
       <Tab.Screen name="TeacherNotifications" component={TeacherNotificationsScreen} options={{ tabBarLabel: 'Notify' }} />
+      <Tab.Screen name="Profile" component={ProfileScreen} options={{ tabBarLabel: 'Profile' }} />
     </Tab.Navigator>
   );
 };
