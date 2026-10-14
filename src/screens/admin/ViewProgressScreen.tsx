@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
 import { executeQuery } from '../../database/database';
 import { AdminStackParamList } from '../../navigation/AdminNavigator';
+import { ensureProgressTables } from '../../services/progressService';
 
 type Props = NativeStackScreenProps<AdminStackParamList, 'ViewProgress'>;
 
@@ -39,6 +40,7 @@ const ViewProgressScreen: React.FC<Props> = ({ navigation }) => {
   const loadProgress = async () => {
     try {
       setLoading(true);
+      await ensureProgressTables();
 
       const items = await executeQuery(
         `SELECT 
@@ -47,22 +49,22 @@ const ViewProgressScreen: React.FC<Props> = ({ navigation }) => {
           u.email,
           c.class_number,
           (
-            SELECT COUNT(*) FROM video_progress vp 
+            SELECT COUNT(DISTINCT vp.video_id) FROM video_progress vp 
             WHERE vp.user_id = u.id AND vp.is_completed = 1
           ) as videos_watched,
           (
             SELECT COUNT(*) FROM videos v WHERE v.is_active = 1
           ) as total_videos,
           (
-            SELECT COUNT(*) FROM quiz_attempts qa 
+            SELECT COUNT(DISTINCT qa.quiz_id) FROM quiz_attempts qa 
             WHERE qa.user_id = u.id
           ) as quizzes_completed,
           (
             SELECT COUNT(*) FROM quizzes q WHERE q.is_active = 1
           ) as total_quizzes,
           (
-            SELECT COUNT(*) FROM progress p 
-            WHERE p.user_id = u.id AND p.pdf_viewed = 1
+            SELECT COUNT(DISTINCT pp.pdf_id) FROM pdf_progress pp 
+            WHERE pp.user_id = u.id
           ) as pdfs_viewed,
           (
             SELECT COUNT(*) FROM pdfs pd WHERE pd.is_active = 1

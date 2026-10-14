@@ -53,14 +53,32 @@ const ParentDashboardScreen: React.FC = () => {
         [selectedChild.id]
       );
 
-      const completed = progressRows.filter((r: any) => r.quiz_completed).length;
-      const scores = progressRows
-        .filter((r: any) => r.quiz_completed)
-        .map((r: any) => r.quiz_score as number);
-      const avg =
-        scores.length > 0
-          ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
-          : 0;
+      const attemptRows = await executeQuery(
+        `SELECT score, total_questions FROM quiz_attempts WHERE user_id = ?`,
+        [selectedChild.id]
+      );
+
+      const distinctQuizzes = await executeQuery(
+        `SELECT COUNT(DISTINCT quiz_id) as count FROM quiz_attempts WHERE user_id = ?`,
+        [selectedChild.id]
+      );
+
+      const completed = distinctQuizzes[0]?.count || progressRows.filter((r: any) => r.quiz_completed).length;
+
+      let avg = 0;
+      if (attemptRows.length > 0) {
+        const totalPct = attemptRows.reduce((sum: number, a: any) => {
+          const pct = a.total_questions > 0 ? (a.score / a.total_questions) * 100 : 0;
+          return sum + pct;
+        }, 0);
+        avg = Math.round(totalPct / attemptRows.length);
+      } else {
+        const scores = progressRows
+          .filter((r: any) => r.quiz_completed)
+          .map((r: any) => r.quiz_score as number);
+        avg = scores.length > 0 ? Math.round(scores.reduce((a: number, b: number) => a + b, 0) / scores.length) : 0;
+      }
+
       const weak = progressRows.filter(
         (r: any) => r.quiz_completed && r.quiz_score < 40
       ).length;

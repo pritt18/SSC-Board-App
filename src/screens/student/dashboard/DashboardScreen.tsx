@@ -14,6 +14,7 @@ import { useLanguage } from '../../../context/LanguageContext';
 import { executeQuery } from '../../../database/database';
 import { COLORS } from '../../../constants/colors';
 import { Ionicons } from '@expo/vector-icons';
+import { ensureProgressTables } from '../../../services/progressService';
 
 interface DashboardStats {
   totalVideos: number;
@@ -49,6 +50,7 @@ const DashboardScreen: React.FC = ({ navigation }: any) => {
 
     try {
       setLoading(true);
+      await ensureProgressTables();
 
       // Get all stats in parallel
       const [
@@ -58,37 +60,66 @@ const DashboardScreen: React.FC = ({ navigation }: any) => {
         completedQuizzes,
         totalPdfs,
         viewedPdfs,
+        legacyPdfs,
         recentActivity,
       ] = await Promise.all([
         executeQuery('SELECT COUNT(*) as count FROM videos WHERE is_active = 1', []),
         executeQuery(
-          'SELECT COUNT(*) as count FROM video_progress WHERE user_id = ? AND is_completed = 1',
+          'SELECT COUNT(DISTINCT video_id) as count FROM video_progress WHERE user_id = ? AND is_completed = 1',
           [user.id]
         ),
         executeQuery('SELECT COUNT(*) as count FROM quizzes WHERE is_active = 1', []),
         executeQuery(
-          'SELECT COUNT(*) as count FROM quiz_attempts WHERE user_id = ?',
+          'SELECT COUNT(DISTINCT quiz_id) as count FROM quiz_attempts WHERE user_id = ?',
           [user.id]
         ),
         executeQuery('SELECT COUNT(*) as count FROM pdfs WHERE is_active = 1', []),
         executeQuery(
+          'SELECT COUNT(DISTINCT pdf_id) as count FROM pdf_progress WHERE user_id = ?',
+          [user.id]
+        ),
+        executeQuery(
           'SELECT COUNT(*) as count FROM progress WHERE user_id = ? AND pdf_viewed = 1',
           [user.id]
         ),
-        // Get recent activity
+        // Get recent activity across videos, quizzes, and books
         executeQuery(
-          `SELECT 
-            v.title_english as title,
-            'video' as type,
-            vp.last_watched_at as date
-          FROM video_progress vp
-          JOIN videos v ON vp.video_id = v.id
-          WHERE vp.user_id = ?
-          ORDER BY vp.last_watched_at DESC
-          LIMIT 5`,
-          [user.id]
+          `SELECT title, type, date FROM (
+             SELECT 
+               v.title_english as title,
+               'video' as type,
+               vp.last_watched_at as date
+             FROM video_progress vp
+             JOIN videos v ON vp.video_id = v.id
+             WHERE vp.user_id = ?
+
+             UNION ALL
+
+             SELECT 
+               q.title_english as title,
+               'quiz' as type,
+               qa.attempted_at as date
+             FROM quiz_attempts qa
+             JOIN quizzes q ON qa.quiz_id = q.id
+             WHERE qa.user_id = ?
+
+             UNION ALL
+
+             SELECT 
+               p.title_english as title,
+               'pdf' as type,
+               pp.last_read_at as date
+             FROM pdf_progress pp
+             JOIN pdfs p ON pp.pdf_id = p.id
+             WHERE pp.user_id = ?
+           )
+           ORDER BY date DESC
+           LIMIT 5`,
+          [user.id, user.id, user.id]
         ),
       ]);
+
+      const effectiveViewedPdfs = Math.max(viewedPdfs[0]?.count || 0, legacyPdfs[0]?.count || 0);
 
       setStats({
         totalVideos: totalVideos[0]?.count || 0,
@@ -96,7 +127,7 @@ const DashboardScreen: React.FC = ({ navigation }: any) => {
         totalQuizzes: totalQuizzes[0]?.count || 0,
         completedQuizzes: completedQuizzes[0]?.count || 0,
         totalPdfs: totalPdfs[0]?.count || 0,
-        viewedPdfs: viewedPdfs[0]?.count || 0,
+        viewedPdfs: effectiveViewedPdfs,
         recentActivity: recentActivity || [],
       });
 
@@ -286,7 +317,7 @@ const DashboardScreen: React.FC = ({ navigation }: any) => {
             stats.recentActivity.map((item, index) => (
               <View key={index} style={styles.activityItem}>
                 <View style={styles.activityIcon}>
-                  <Text>{item.type === 'video' ? '▶️' : '📄'}</Text>
+                  <Text>{item.type === 'video' ? '▶️' : item.type === 'quiz' ? '📝' : '📄'}</Text>
                 </View>
                 <View style={styles.activityContent}>
                   <Text style={styles.activityTitle}>{item.title}</Text>

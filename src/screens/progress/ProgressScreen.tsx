@@ -6,6 +6,13 @@ import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { executeQuery } from '../../database/database';
 import { COLORS } from '../../constants/colors';
+import { ensureProgressTables } from '../../services/progressService';
+
+interface RecentActivityItem {
+  title: string;
+  type: 'video' | 'quiz' | 'pdf';
+  date: string;
+}
 
 interface ProgressData {
   total_videos: number;
@@ -14,6 +21,7 @@ interface ProgressData {
   total_quizzes: number;
   total_pdfs: number;
   viewed_pdfs: number;
+  recent_activity: RecentActivityItem[];
 }
 
 const ProgressScreen: React.FC = () => {
@@ -27,6 +35,7 @@ const ProgressScreen: React.FC = () => {
     total_quizzes: 0,
     total_pdfs: 0,
     viewed_pdfs: 0,
+    recent_activity: [],
   });
 
   const loadProgress = async () => {
@@ -34,6 +43,7 @@ const ProgressScreen: React.FC = () => {
 
     try {
       setLoading(true);
+      await ensureProgressTables();
 
       // Get total videos
       const totalVideos = await executeQuery(
@@ -43,7 +53,7 @@ const ProgressScreen: React.FC = () => {
 
       // Get watched videos
       const watchedVideos = await executeQuery(
-        `SELECT COUNT(*) as count FROM video_progress 
+        `SELECT COUNT(DISTINCT video_id) as count FROM video_progress 
          WHERE user_id = ? AND is_completed = 1`,
         [user.id]
       );
@@ -54,9 +64,9 @@ const ProgressScreen: React.FC = () => {
         []
       );
 
-      // Get completed quizzes
+      // Get completed quizzes (count distinct quizzes attempted)
       const completedQuizzes = await executeQuery(
-        `SELECT COUNT(*) as count FROM quiz_attempts 
+        `SELECT COUNT(DISTINCT quiz_id) as count FROM quiz_attempts 
          WHERE user_id = ?`,
         [user.id]
       );
@@ -67,11 +77,55 @@ const ProgressScreen: React.FC = () => {
         []
       );
 
-      // Get viewed PDFs
+      // Get viewed PDFs from pdf_progress, fallback to progress table
       const viewedPdfs = await executeQuery(
+        `SELECT COUNT(DISTINCT pdf_id) as count FROM pdf_progress 
+         WHERE user_id = ?`,
+        [user.id]
+      );
+
+      const legacyPdfs = await executeQuery(
         `SELECT COUNT(*) as count FROM progress 
          WHERE user_id = ? AND pdf_viewed = 1`,
         [user.id]
+      );
+
+      const effectiveViewedPdfs = Math.max(viewedPdfs[0]?.count || 0, legacyPdfs[0]?.count || 0);
+
+      // Recent Activity across videos, quizzes, and books
+      const recentRows = await executeQuery(
+        `SELECT title, type, date FROM (
+           SELECT 
+             v.title_english as title,
+             'video' as type,
+             vp.last_watched_at as date
+           FROM video_progress vp
+           JOIN videos v ON vp.video_id = v.id
+           WHERE vp.user_id = ?
+
+           UNION ALL
+
+           SELECT 
+             q.title_english as title,
+             'quiz' as type,
+             qa.attempted_at as date
+           FROM quiz_attempts qa
+           JOIN quizzes q ON qa.quiz_id = q.id
+           WHERE qa.user_id = ?
+
+           UNION ALL
+
+           SELECT 
+             p.title_english as title,
+             'pdf' as type,
+             pp.last_read_at as date
+           FROM pdf_progress pp
+           JOIN pdfs p ON pp.pdf_id = p.id
+           WHERE pp.user_id = ?
+         )
+         ORDER BY date DESC
+         LIMIT 5`,
+        [user.id, user.id, user.id]
       );
 
       setProgress({
@@ -80,7 +134,8 @@ const ProgressScreen: React.FC = () => {
         total_quizzes: totalQuizzes[0]?.count || 0,
         completed_quizzes: completedQuizzes[0]?.count || 0,
         total_pdfs: totalPdfs[0]?.count || 0,
-        viewed_pdfs: viewedPdfs[0]?.count || 0,
+        viewed_pdfs: effectiveViewedPdfs,
+        recent_activity: (recentRows as any[]) || [],
       });
 
     } catch (error) {
@@ -180,13 +235,29 @@ const ProgressScreen: React.FC = () => {
         {/* Recent Activity */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Recent Activity</Text>
-          <View style={styles.activityCard}>
-            <Text style={styles.activityText}>
-              {progress.watched_videos > 0 
-                ? `Watched ${progress.watched_videos} videos`
-                : 'Start watching videos to track progress'}
-            </Text>
-          </View>
+          {progress.recent_activity.length > 0 ? (
+            progress.recent_activity.map((item, index) => {
+              const icon = item.type === 'video' ? '🎬' : item.type === 'quiz' ? '📝' : '📄';
+              const typeLabel = item.type === 'video' ? 'Watched Video' : item.type === 'quiz' ? 'Completed Quiz' : 'Read Textbook';
+              return (
+                <View key={index} style={styles.activityItem}>
+                  <View style={styles.activityIcon}>
+                    <Text style={{ fontSize: 18 }}>{icon}</Text>
+                  </View>
+                  <View style={styles.activityContent}>
+                    <Text style={styles.activityTitle} numberOfLines={1}>{item.title}</Text>
+                    <Text style={styles.activityMeta}>{typeLabel} • {new Date(item.date).toLocaleDateString()}</Text>
+                  </View>
+                </View>
+              );
+            })
+          ) : (
+            <View style={styles.activityCard}>
+              <Text style={styles.activityText}>
+                Start watching videos, taking quizzes, or reading textbooks to track your progress!
+              </Text>
+            </View>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -327,6 +398,39 @@ const styles = StyleSheet.create({
   },
   activityText: {
     fontSize: 14,
+    color: COLORS.textSecondary,
+    lineHeight: 20,
+  },
+  activityItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.white,
+    padding: 14,
+    borderRadius: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  activityIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  activityContent: {
+    flex: 1,
+  },
+  activityTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
+    marginBottom: 3,
+  },
+  activityMeta: {
+    fontSize: 12,
     color: COLORS.textSecondary,
   },
 });

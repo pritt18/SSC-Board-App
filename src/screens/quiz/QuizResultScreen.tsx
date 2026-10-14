@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 
 import {
   Pressable,
@@ -19,6 +19,8 @@ import {
 import { COLORS } from '../../constants/colors';
 import { executeQuery } from '../../database/database';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../../context/AuthContext';
+import { recordQuizAttempt } from '../../services/progressService';
 
 import {
   LearningStackParamList,
@@ -65,9 +67,21 @@ const QuizResultScreen: React.FC<Props> = ({
     total,
   } = route.params;
 
+  const { user } = useAuth();
+  const hasRecorded = useRef(false);
+
   const fallback = quizInfo[quizId];
   const [quizTitle, setQuizTitle] = useState<string>(fallback?.title || 'Quiz Result');
   const [passingPercentage, setPassingPercentage] = useState<number>(fallback?.passingPercentage ?? 40);
+
+  useEffect(() => {
+    if (!hasRecorded.current && user?.id && quizId) {
+      hasRecorded.current = true;
+      recordQuizAttempt(user.id, quizId, score, total).catch((err) => {
+        console.error('Failed to record quiz attempt in QuizResultScreen:', err);
+      });
+    }
+  }, [user?.id, quizId, score, total]);
 
   useEffect(() => {
     let active = true;

@@ -12,6 +12,8 @@ import { COLORS } from '../../constants/colors';
 import { LearningStackParamList } from '../../navigation/navigationTypes';
 import { resolvePdfSource } from '../../utils/pdfResolver';
 import { useAuth } from '../../context/AuthContext';
+import { executeQuery } from '../../database/database';
+import { recordPdfProgress } from '../../services/progressService';
 
 type Props = NativeStackScreenProps<LearningStackParamList, 'PdfDisplay'>;
 
@@ -1071,6 +1073,23 @@ const PdfDisplayScreen: React.FC<Props> = ({ route, navigation }) => {
           if (isMounted) {
             setLocalPdfUri(pdfUrl);
             setViewerReady(true);
+          }
+        }
+
+        // Record student reading progress
+        if (user?.id) {
+          let targetPdfId = route.params.pdfId;
+          if (!targetPdfId) {
+            const match = await executeQuery(
+              'SELECT id FROM pdfs WHERE pdf_url = ? OR title_english = ? LIMIT 1',
+              [pdfUrl, title]
+            );
+            if (match && match.length > 0) {
+              targetPdfId = match[0].id;
+            }
+          }
+          if (targetPdfId) {
+            recordPdfProgress(user.id, targetPdfId);
           }
         }
       } catch (err) {

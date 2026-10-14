@@ -161,6 +161,18 @@ export const schema: string[] = [
     UNIQUE(user_id, video_id)
   )`,
 
+  // PDF Progress Table
+  `CREATE TABLE IF NOT EXISTS pdf_progress (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    pdf_id INTEGER NOT NULL,
+    is_completed BOOLEAN DEFAULT 1,
+    last_read_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (pdf_id) REFERENCES pdfs(id) ON DELETE CASCADE,
+    UNIQUE(user_id, pdf_id)
+  )`,
+
   // Quiz Attempts Table
   `CREATE TABLE IF NOT EXISTS quiz_attempts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

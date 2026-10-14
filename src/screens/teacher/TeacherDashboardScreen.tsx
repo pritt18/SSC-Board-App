@@ -96,9 +96,10 @@ const TeacherDashboardScreen: React.FC = () => {
       );
 
       const scores = await executeQuery(
-        `SELECT AVG(quiz_score) as avg FROM progress p
-         JOIN users u ON p.user_id = u.id
-         WHERE u.class_id = ? AND u.role = 'student' AND p.quiz_completed = 1`,
+        `SELECT COALESCE(AVG(qa.score * 100.0 / NULLIF(qa.total_questions, 0)), 0) as avg 
+         FROM quiz_attempts qa
+         JOIN users u ON qa.user_id = u.id
+         WHERE u.class_id = ? AND u.role = 'student'`,
         [user.class_id]
       );
 

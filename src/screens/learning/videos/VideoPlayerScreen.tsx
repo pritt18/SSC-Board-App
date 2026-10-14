@@ -550,6 +550,24 @@ const VideoPlayerScreen: React.FC<Props> = ({ navigation, route }) => {
            VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
           [user.id, videoId, positionMillis, durationMillis, isCompleted]
         );
+
+        if (isCompleted === 1 && route.params?.subjectId) {
+          const existing = await executeQuery(
+            'SELECT id FROM progress WHERE user_id = ? AND subject_id = ? LIMIT 1',
+            [user.id, route.params.subjectId]
+          );
+          if (existing.length > 0) {
+            await executeQuery(
+              'UPDATE progress SET video_watched = 1, last_accessed = CURRENT_TIMESTAMP WHERE id = ?',
+              [existing[0].id]
+            );
+          } else {
+            await executeQuery(
+              'INSERT INTO progress (user_id, subject_id, video_watched, last_accessed) VALUES (?, ?, 1, CURRENT_TIMESTAMP)',
+              [user.id, route.params.subjectId]
+            );
+          }
+        }
       }
 
       // 2. AsyncStorage saving

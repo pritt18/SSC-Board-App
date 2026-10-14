@@ -244,6 +244,20 @@ export const migrations: string[] = [
   `ALTER TABLE videos ADD COLUMN medium TEXT DEFAULT 'both'`,
   `CREATE INDEX IF NOT EXISTS idx_videos_medium ON videos(medium)`,
 
+  // PDF Progress Table & Indexes
+  `CREATE TABLE IF NOT EXISTS pdf_progress (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    pdf_id INTEGER NOT NULL,
+    is_completed BOOLEAN DEFAULT 1,
+    last_read_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (pdf_id) REFERENCES pdfs(id) ON DELETE CASCADE,
+    UNIQUE(user_id, pdf_id)
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_pdf_progress_user ON pdf_progress(user_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_pdf_progress_pdf ON pdf_progress(pdf_id)`,
+
 
   // ============================================
   // DEFENSIVE / SELF-HEALING COLUMN CHECKS

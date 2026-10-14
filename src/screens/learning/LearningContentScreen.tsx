@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -9,9 +9,12 @@ import {
 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
 
 import { COLORS } from '../../constants/colors';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../../context/AuthContext';
+import { executeQuery } from '../../database/database';
 
 import {
   LearningStackParamList,
@@ -27,6 +30,39 @@ const LearningContentScreen: React.FC<Props> = ({
   route,
 }) => {
   const { subjectId } = route.params;
+  const { user } = useAuth();
+  const [subjectProgress, setSubjectProgress] = useState(0);
+
+  useFocusEffect(
+    useCallback(() => {
+      let isMounted = true;
+      const loadSubjectProgress = async () => {
+        if (!user?.id || !subjectId) return;
+        try {
+          const rows = await executeQuery(
+            `SELECT video_watched, pdf_viewed, quiz_completed FROM progress 
+             WHERE user_id = ? AND subject_id = ? LIMIT 1`,
+            [user.id, subjectId]
+          );
+          if (isMounted && rows && rows.length > 0) {
+            const v = rows[0].video_watched ? 1 : 0;
+            const p = rows[0].pdf_viewed ? 1 : 0;
+            const q = rows[0].quiz_completed ? 1 : 0;
+            const pct = Math.round(((v + p + q) / 3) * 100);
+            setSubjectProgress(pct);
+          } else if (isMounted) {
+            setSubjectProgress(0);
+          }
+        } catch (e) {
+          console.error('Error loading subject progress:', e);
+        }
+      };
+      loadSubjectProgress();
+      return () => {
+        isMounted = false;
+      };
+    }, [user?.id, subjectId])
+  );
 
   // ---------------------------------------
   // VIDEO
@@ -227,12 +263,12 @@ const LearningContentScreen: React.FC<Props> = ({
             </Text>
 
             <Text style={styles.progressPercentage}>
-              25%
+              {subjectProgress}%
             </Text>
           </View>
 
           <View style={styles.progressBackground}>
-            <View style={styles.progressFill} />
+            <View style={[styles.progressFill, { width: `${subjectProgress}%` }]} />
           </View>
 
           <Text style={styles.progressDescription}>
@@ -371,7 +407,6 @@ const styles = StyleSheet.create({
   },
 
   progressFill: {
-    width: '25%',
     height: '100%',
     backgroundColor: COLORS.white,
     borderRadius: 4,

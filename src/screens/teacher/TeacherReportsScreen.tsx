@@ -39,13 +39,23 @@ const TeacherReportsScreen: React.FC = () => {
            u.id,
            u.full_name,
            u.email,
-           COUNT(CASE WHEN p.quiz_completed = 1 THEN 1 END) as quizzes_completed,
-           AVG(CASE WHEN p.quiz_completed = 1 THEN p.quiz_score END) as avg_score,
-           COUNT(CASE WHEN p.video_watched = 1 THEN 1 END) as videos_watched
+           (
+             SELECT COUNT(DISTINCT qa.quiz_id) 
+             FROM quiz_attempts qa 
+             WHERE qa.user_id = u.id
+           ) as quizzes_completed,
+           (
+             SELECT COALESCE(AVG(qa.score * 100.0 / NULLIF(qa.total_questions, 0)), 0)
+             FROM quiz_attempts qa 
+             WHERE qa.user_id = u.id
+           ) as avg_score,
+           (
+             SELECT COUNT(DISTINCT vp.video_id) 
+             FROM video_progress vp 
+             WHERE vp.user_id = u.id AND vp.is_completed = 1
+           ) as videos_watched
          FROM users u
-         LEFT JOIN progress p ON p.user_id = u.id
          WHERE u.role = 'student' AND u.class_id = ?
-         GROUP BY u.id
          ORDER BY u.full_name ASC`,
         [user.class_id]
       );

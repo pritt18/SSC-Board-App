@@ -459,7 +459,7 @@ const UserDetailScreen: React.FC<Props> = ({
 
         executeQuery(
           `
-          SELECT COUNT(*) AS count
+          SELECT COUNT(DISTINCT quiz_id) AS count
 
           FROM quiz_attempts
 
@@ -1142,6 +1142,19 @@ const UserDetailScreen: React.FC<Props> = ({
             `,
             [deletingUserId],
           );
+
+          try {
+            await executeQuery(
+              `
+              DELETE FROM pdf_progress
+
+              WHERE user_id = ?
+              `,
+              [deletingUserId],
+            );
+          } catch (e) {
+            // Table might not exist yet
+          }
 
 
           // ------------------------------------------------------
