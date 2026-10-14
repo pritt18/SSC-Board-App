@@ -336,9 +336,15 @@ const VideoPlayerScreen: React.FC<Props> = ({ navigation, route }) => {
       }
 
       // 5. Google Drive direct / usercontent URLs
+      let driveId: string | null = null;
       const driveMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/) || url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
       if (driveMatch && driveMatch[1]) {
-        const driveId = driveMatch[1];
+        driveId = driveMatch[1];
+      } else if (/^[a-zA-Z0-9_-]{25,50}$/.test(url.trim())) {
+        driveId = url.trim();
+      }
+
+      if (driveId) {
         if (Platform.OS === 'web') {
           const proxyUri = `/api/drive-video?id=${driveId}`;
           if (isMounted) setVideoSource({ uri: proxyUri });
@@ -381,19 +387,38 @@ const VideoPlayerScreen: React.FC<Props> = ({ navigation, route }) => {
           video_duration,
           sort_order
         FROM videos
-        WHERE subject_id = ? AND is_active = 1
+        WHERE subject_id = ?
       `;
       const params: any[] = [subjectId];
 
-      if (user?.medium && (user.medium === 'english' || user.medium === 'marathi')) {
-        query += ` AND (medium IS NULL OR medium = 'both' OR medium = ?)`;
-        params.push(user.medium);
+      if (user?.role !== 'admin') {
+        query += ` AND is_active = 1`;
+        if (user?.medium && (user.medium === 'english' || user.medium === 'marathi')) {
+          query += ` AND (medium IS NULL OR medium = 'both' OR medium = ?)`;
+          params.push(user.medium);
+        }
       }
 
       query += ` ORDER BY sort_order ASC, id ASC`;
 
       const result = await executeQuery(query, params);
-      const videoData = result as VideoItem[];
+      const videoData = (result as VideoItem[]) || [];
+
+      // If a specific videoId was requested but not in the subject list (e.g. inactive or direct link)
+      if (targetVideoId && !videoData.some((v) => v.id === targetVideoId)) {
+        try {
+          const single = await executeQuery(
+            `SELECT id, subject_id, title_english, title_marathi, description_english, description_marathi, video_url, subtitle_url, video_duration, sort_order FROM videos WHERE id = ?`,
+            [targetVideoId]
+          );
+          if (single && single.length > 0) {
+            videoData.unshift(single[0] as VideoItem);
+          }
+        } catch (fetchSingleErr) {
+          console.warn('Could not load specific targetVideoId:', fetchSingleErr);
+        }
+      }
+
       setVideos(videoData);
 
       if (videoData.length > 0) {

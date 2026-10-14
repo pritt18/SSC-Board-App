@@ -32,11 +32,11 @@ export function resolvePdfSource(pdfUrl: string, title?: string): ResolvedPdf | 
     });
   }
 
-  // 3. Try finding by Google Drive ID in URL
+  // 3. Try finding by Google Drive ID in URL or raw ID string
   if (!match && pdfUrl) {
     const driveMatch = pdfUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/) || pdfUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-    if (driveMatch && driveMatch[1]) {
-      const dId = driveMatch[1];
+    const dId = driveMatch ? driveMatch[1] : (/^[a-zA-Z0-9_-]{25,50}$/.test(pdfUrl.trim()) ? pdfUrl.trim() : null);
+    if (dId) {
       const byDrive = textbookPdfs.find((b) => b.driveId === dId);
       if (byDrive) {
         match = byDrive;

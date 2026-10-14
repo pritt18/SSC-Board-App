@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 import {
   Pressable,
@@ -17,6 +17,7 @@ import {
 } from '@react-navigation/native-stack';
 
 import { COLORS } from '../../constants/colors';
+import { executeQuery } from '../../database/database';
 
 import {
   LearningStackParamList,
@@ -63,7 +64,34 @@ const QuizResultScreen: React.FC<Props> = ({
     total,
   } = route.params;
 
-  const quiz = quizInfo[quizId];
+  const fallback = quizInfo[quizId];
+  const [quizTitle, setQuizTitle] = useState<string>(fallback?.title || 'Quiz Result');
+  const [passingPercentage, setPassingPercentage] = useState<number>(fallback?.passingPercentage ?? 40);
+
+  useEffect(() => {
+    let active = true;
+    const fetchQuizDetails = async () => {
+      try {
+        const rows = await executeQuery(
+          'SELECT title_english, passing_percentage FROM quizzes WHERE id = ?',
+          [quizId]
+        );
+        if (active && rows && rows.length > 0) {
+          if (rows[0].title_english) setQuizTitle(rows[0].title_english);
+          if (typeof rows[0].passing_percentage === 'number') {
+            setPassingPercentage(rows[0].passing_percentage);
+          }
+        }
+      } catch (err) {
+        console.warn('Could not load quiz details in QuizResultScreen:', err);
+      }
+    };
+
+    fetchQuizDetails();
+    return () => {
+      active = false;
+    };
+  }, [quizId]);
 
   const percentage =
     total > 0
@@ -71,9 +99,6 @@ const QuizResultScreen: React.FC<Props> = ({
           (score / total) * 100,
         )
       : 0;
-
-  const passingPercentage =
-    quiz?.passingPercentage ?? 40;
 
   const isPassed =
     percentage >=
@@ -121,8 +146,7 @@ const QuizResultScreen: React.FC<Props> = ({
         <Text
           style={styles.quizTitle}
         >
-          {quiz?.title ??
-            'Quiz Result'}
+          {quizTitle}
         </Text>
 
         <Text

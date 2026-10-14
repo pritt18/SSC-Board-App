@@ -5,6 +5,7 @@ import React, {
 
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -99,12 +100,16 @@ const NotesScreen: React.FC<Props> = ({
   const handleNotePress = (
     note: NoteItem,
   ) => {
-    console.log(
-      'Selected note:',
-      note.notes_url,
-    );
+    if (!note.notes_url) {
+      Alert.alert('Notice', 'Notes for this chapter are coming soon.');
+      return;
+    }
 
-    // Offline/local note opening will be added here.
+    navigation.navigate('PdfDisplay', {
+      pdfId: note.id,
+      pdfUrl: note.notes_url,
+      title: note.name_english || 'Chapter Notes',
+    });
   };
 
   if (isLoading) {

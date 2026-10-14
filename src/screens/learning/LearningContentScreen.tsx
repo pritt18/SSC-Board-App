@@ -67,29 +67,18 @@ const LearningContentScreen: React.FC<Props> = ({
   // PRACTICE QUESTIONS
   // ---------------------------------------
   const handlePracticePress = () => {
-    console.log(
-      'Practice Questions clicked for subject:',
+    navigation.navigate('QuizList', {
       subjectId,
-    );
+    });
   };
 
   // ---------------------------------------
   // GAMES
   // ---------------------------------------
   const handleGamesPress = () => {
-    console.log(
-      'Games clicked for subject:',
-      subjectId,
-    );
-
     /**
      * LearningStack is nested inside the
      * Student bottom-tab navigator.
-     *
-     * Games is a route of the parent
-     * StudentTab navigator.
-     *
-     * Therefore we navigate to the parent.
      */
     const parentNavigation = navigation.getParent();
 
@@ -106,17 +95,6 @@ const LearningContentScreen: React.FC<Props> = ({
   // PUZZLES
   // ---------------------------------------
   const handlePuzzlesPress = () => {
-    console.log(
-      'Puzzles clicked for subject:',
-      subjectId,
-    );
-
-    /**
-     * Puzzles are part of the Games module.
-     *
-     * Games is available as a bottom tab in
-     * StudentNavigator.
-     */
     const parentNavigation = navigation.getParent();
 
     if (parentNavigation) {
@@ -132,10 +110,17 @@ const LearningContentScreen: React.FC<Props> = ({
   // ASSIGNMENT
   // ---------------------------------------
   const handleAssignmentPress = () => {
-    console.log(
-      'Assignment clicked for subject:',
-      subjectId,
-    );
+    const parentNavigation = navigation.getParent();
+
+    if (parentNavigation) {
+      parentNavigation.navigate('Dashboard', {
+        screen: 'StudentAssignments',
+      });
+    } else {
+      console.warn(
+        'Assignment navigation: Parent navigator not found',
+      );
+    }
   };
 
   // ---------------------------------------

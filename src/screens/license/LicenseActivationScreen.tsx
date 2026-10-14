@@ -5,7 +5,9 @@ import {
   Text,
   View,
   Alert,
+  TouchableOpacity,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { LicenseService } from '../../services/licenseService';
 import Button from '../../components/ui/Button';
@@ -69,6 +71,16 @@ const LicenseActivationScreen: React.FC<Props> = ({
 
   return (
     <SafeAreaView style={styles.container}>
+      {navigation?.canGoBack && navigation.canGoBack() && (
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        >
+          <Ionicons name="arrow-back" size={24} color={COLORS.textPrimary} />
+        </TouchableOpacity>
+      )}
+
       <View style={styles.content}>
         <View style={styles.iconContainer}>
           <Text style={styles.icon}>🔐</Text>
@@ -95,6 +107,15 @@ const LicenseActivationScreen: React.FC<Props> = ({
           loading={isLoading}
         />
 
+        {navigation?.canGoBack && navigation.canGoBack() && (
+          <TouchableOpacity
+            style={styles.cancelButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.cancelButtonText}>Go Back</Text>
+          </TouchableOpacity>
+        )}
+
         <Text style={styles.note}>
           Your license will be securely stored on this device for offline access.
         </Text>
@@ -107,6 +128,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  backButton: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    alignSelf: 'flex-start',
   },
   content: {
     flex: 1,
@@ -135,6 +161,16 @@ const styles = StyleSheet.create({
   },
   input: {
     marginBottom: 20,
+  },
+  cancelButton: {
+    marginTop: 14,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    color: COLORS.textSecondary,
+    fontSize: 15,
+    fontWeight: '500',
   },
   note: {
     color: COLORS.textSecondary,
