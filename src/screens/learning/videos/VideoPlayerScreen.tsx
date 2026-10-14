@@ -305,15 +305,34 @@ const VideoPlayerScreen: React.FC<Props> = ({ navigation, route }) => {
         return;
       }
 
-      // 1. Check bundled asset dictionary
-      if (videoAssets[url]) {
-        if (isMounted) setVideoSource(videoAssets[url]);
-        return;
-      }
-
-      // 2. Explicit sample video reference
-      if (url === 'sample-video.mp4' && videoAssets['sample-video.mp4']) {
-        if (isMounted) setVideoSource(videoAssets['sample-video.mp4']);
+      // 1. Check bundled asset dictionary or sample-video.mp4
+      const assetModule = videoAssets[url] || (url === 'sample-video.mp4' ? videoAssets['sample-video.mp4'] : null);
+      if (assetModule) {
+        if (Platform.OS === 'web') {
+          try {
+            let assetUri: string | null = null;
+            if (typeof assetModule === 'string') {
+              assetUri = assetModule;
+            } else if (typeof assetModule === 'object' && assetModule !== null) {
+              assetUri = (assetModule as any).uri || (assetModule as any).default || null;
+            }
+            if (!assetUri) {
+              const asset = Asset.fromModule(assetModule);
+              assetUri = asset.uri || asset.localUri || null;
+            }
+            if (isMounted) {
+              setVideoSource({ uri: assetUri || '/assets/assets/videos/sample-video.mp4' });
+              return;
+            }
+          } catch (assetErr) {
+            console.warn('Could not resolve bundled asset URI on web:', assetErr);
+            if (isMounted) {
+              setVideoSource({ uri: '/assets/assets/videos/sample-video.mp4' });
+              return;
+            }
+          }
+        }
+        if (isMounted) setVideoSource(assetModule);
         return;
       }
 
@@ -729,6 +748,23 @@ const VideoPlayerScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   // -------------------------------------------------------------
+  // HTML5 WEB VIDEO DOM HELPER
+  // -------------------------------------------------------------
+  const getVideoDomElement = (): HTMLVideoElement | null => {
+    if (Platform.OS !== 'web') return null;
+    try {
+      const ref = videoRef.current as any;
+      if (ref?._nativeRef?.current?.getVideoElement) {
+        return ref._nativeRef.current.getVideoElement();
+      }
+      if (typeof document !== 'undefined') {
+        return document.querySelector('video');
+      }
+    } catch (_) {}
+    return null;
+  };
+
+  // -------------------------------------------------------------
   // PLAYBACK STATUS UPDATE
   // -------------------------------------------------------------
   const handlePlaybackStatusUpdate = (status: AVPlaybackStatus) => {
@@ -738,8 +774,20 @@ const VideoPlayerScreen: React.FC<Props> = ({ navigation, route }) => {
     const duration = status.durationMillis || 0;
 
     setCurrentPosition(position);
-    setCurrentDuration(duration);
-    setIsPlaying(status.isPlaying);
+    if (duration > 0) {
+      setCurrentDuration(duration);
+    }
+
+    if (Platform.OS === 'web') {
+      const videoEl = getVideoDomElement();
+      if (videoEl) {
+        setIsPlaying(!videoEl.paused && !videoEl.ended);
+      } else {
+        setIsPlaying(status.isPlaying);
+      }
+    } else {
+      setIsPlaying(status.isPlaying);
+    }
 
     // Auto-save progress every 5 seconds
     const difference = Math.abs(position - lastSavedPosition.current);
@@ -769,25 +817,59 @@ const VideoPlayerScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   const togglePlayPause = async () => {
-    if (!videoRef.current) return;
     try {
+      if (Platform.OS === 'web') {
+        const videoEl = getVideoDomElement();
+        if (videoEl) {
+          if (videoEl.paused) {
+            try {
+              await videoEl.play();
+              setIsPlaying(true);
+            } catch (playErr) {
+              console.warn('HTML5 video.play() failed, trying muted playback:', playErr);
+              videoEl.muted = true;
+              await videoEl.play();
+              setIsPlaying(true);
+              showToast('Playing (Muted - click sound icon to unmute)');
+            }
+          } else {
+            videoEl.pause();
+            setIsPlaying(false);
+            if (selectedVideo) {
+              saveVideoProgress(selectedVideo.id, currentPosition, currentDuration);
+            }
+          }
+          return;
+        }
+      }
+
+      if (!videoRef.current) return;
       if (isPlaying) {
         await videoRef.current.pauseAsync();
         if (selectedVideo) {
           saveVideoProgress(selectedVideo.id, currentPosition, currentDuration);
         }
+        setIsPlaying(false);
       } else {
         await videoRef.current.playAsync();
+        setIsPlaying(true);
       }
-      setIsPlaying(!isPlaying);
     } catch (error) {
       console.error('Toggle play/pause error:', error);
     }
   };
 
   const handleSeek = async (position: number) => {
-    if (!videoRef.current) return;
     try {
+      if (Platform.OS === 'web') {
+        const videoEl = getVideoDomElement();
+        if (videoEl) {
+          videoEl.currentTime = position / 1000;
+          setCurrentPosition(position);
+          return;
+        }
+      }
+      if (!videoRef.current) return;
       await videoRef.current.setPositionAsync(position);
       setCurrentPosition(position);
     } catch (error) {
@@ -799,6 +881,14 @@ const VideoPlayerScreen: React.FC<Props> = ({ navigation, route }) => {
     try {
       setPlaybackRate(rate);
       setShowSpeedOptions(false);
+      if (Platform.OS === 'web') {
+        const videoEl = getVideoDomElement();
+        if (videoEl) {
+          videoEl.playbackRate = rate;
+          showToast(`Speed: ${rate}x`);
+          return;
+        }
+      }
       await videoRef.current?.setRateAsync(rate, true);
       showToast(`Speed: ${rate}x`);
     } catch (error) {
@@ -1033,7 +1123,16 @@ const VideoPlayerScreen: React.FC<Props> = ({ navigation, route }) => {
             shouldCorrectPitch
             progressUpdateIntervalMillis={500}
             onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
-            onError={(e) => console.warn('Video playback error:', e)}
+            onError={(e) => {
+              console.warn('Video playback error:', e);
+              showToast('Stream temporarily unavailable. Loading fallback lesson...');
+              if (selectedVideo?.video_url !== 'sample-video.mp4') {
+                const fallbackUri = Platform.OS === 'web'
+                  ? { uri: '/assets/assets/videos/sample-video.mp4' }
+                  : (videoAssets['sample-video.mp4'] || { uri: 'sample-video.mp4' });
+                setVideoSource(fallbackUri);
+              }
+            }}
           />
         ) : (
           <View style={[styles.video, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#000000' }]}>

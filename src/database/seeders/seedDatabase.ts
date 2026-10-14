@@ -131,7 +131,7 @@ export const seedDatabase = async () => {
           'Demo Student',
           'student',
           'english',
-          1,
+          6,
         ]
       );
       const createdStudent = await executeQuery(
@@ -142,6 +142,11 @@ export const seedDatabase = async () => {
       console.log('Demo student user created');
     } else {
       studentUserId = existingStudent[0].id;
+      // Ensure demo student is assigned to Class 6 so state board video lessons are readily accessible
+      await executeQuery(
+        `UPDATE users SET class_id = 6 WHERE id = ? AND (class_id IS NULL OR class_id = 1)`,
+        [studentUserId]
+      );
     }
 
     // Seed active licenses for Class 1 to 6 for the student

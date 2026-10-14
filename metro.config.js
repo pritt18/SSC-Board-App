@@ -206,29 +206,79 @@ config.server.enhanceMiddleware = (middleware, metroServer) => {
           streamRes.pipe(res);
         };
 
+        const streamLocalSampleFallback = () => {
+          const samplePath = path.join(__dirname, 'assets', 'videos', 'sample-video.mp4');
+          if (fs.existsSync(samplePath)) {
+            const stat = fs.statSync(samplePath);
+            const fileSize = stat.size;
+            const range = req.headers.range;
+
+            res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.setHeader('Accept-Ranges', 'bytes');
+            res.setHeader('Content-Type', 'video/mp4');
+
+            if (range) {
+              const parts = range.replace(/bytes=/, '').split('-');
+              const start = parseInt(parts[0], 10);
+              const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+              const chunksize = (end - start) + 1;
+
+              res.writeHead(206, {
+                'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+                'Content-Length': chunksize,
+                'Content-Type': 'video/mp4',
+              });
+              return fs.createReadStream(samplePath, { start, end }).pipe(res);
+            } else {
+              res.writeHead(200, {
+                'Content-Length': fileSize,
+                'Content-Type': 'video/mp4',
+              });
+              return fs.createReadStream(samplePath).pipe(res);
+            }
+          } else {
+            if (!res.headersSent) {
+              res.statusCode = 404;
+              res.end('Video not found');
+            }
+          }
+        };
+
         const googleReq = https.get(googleUrl, { headers }, (googleRes) => {
           if (googleRes.statusCode >= 300 && googleRes.statusCode < 400 && googleRes.headers.location) {
             const redirReq = https.get(googleRes.headers.location, { headers }, (redirRes) => {
+              if (redirRes.statusCode === 404) {
+                return streamLocalSampleFallback();
+              }
               handleStream(redirRes);
             });
             redirReq.on('error', (err) => {
               console.error('Drive redirect stream error:', err);
               if (!res.headersSent) {
-                res.statusCode = 502;
-                res.end('Error fetching redirect stream');
+                streamLocalSampleFallback();
               }
             });
             return;
           }
 
+          if (googleRes.statusCode === 404) {
+            return streamLocalSampleFallback();
+          }
+
           handleStream(googleRes);
+        });
+
+        req.on('close', () => {
+          try {
+            googleReq.destroy();
+          } catch (_) {}
         });
 
         googleReq.on('error', (err) => {
           console.error('Drive video stream error:', err);
           if (!res.headersSent) {
-            res.statusCode = 502;
-            res.end('Error fetching video from drive');
+            streamLocalSampleFallback();
           }
         });
         return;
