@@ -12,6 +12,7 @@ import {
   ScrollView,
   Image,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 
@@ -19,6 +20,7 @@ const RegisterScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [fullName, setFullName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { register } = useAuth();
@@ -101,13 +103,29 @@ const RegisterScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
             keyboardType="email-address"
           />
 
-          <TextInput
-            style={styles.input}
-            placeholder={t('password') || 'Password (min 6 chars)'}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
+          <View style={styles.passwordContainer}>
+            <TextInput
+              style={styles.passwordInput}
+              placeholder={t('password') || 'Password (min 6 chars)'}
+              placeholderTextColor="#9CA3AF"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+              autoCapitalize="none"
+            />
+            <TouchableOpacity
+              style={styles.eyeButton}
+              onPress={() => setShowPassword(!showPassword)}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                size={22}
+                color="#64748B"
+              />
+            </TouchableOpacity>
+          </View>
 
           <Text style={styles.mediumLabel}>Select Medium</Text>
           <View style={styles.mediumRow}>
@@ -196,6 +214,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 20,
     minHeight: 500,
+    maxWidth: 480,
+    width: '100%',
+    alignSelf: 'center',
   },
   title: {
     fontSize: 32,
@@ -223,6 +244,30 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     borderWidth: 1,
     borderColor: '#ddd',
+    fontSize: 15,
+    color: '#0F172A',
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderRadius: 10,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    paddingHorizontal: 15,
+  },
+  passwordInput: {
+    flex: 1,
+    paddingVertical: 15,
+    paddingRight: 10,
+    fontSize: 15,
+    color: '#0F172A',
+  },
+  eyeButton: {
+    padding: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   button: {
     backgroundColor: '#007AFF',

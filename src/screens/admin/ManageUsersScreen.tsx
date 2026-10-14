@@ -126,6 +126,7 @@ const ManageUsersScreen: React.FC<Props> = ({
     role: 'student',
     class_id: '',
   });
+  const [showPassword, setShowPassword] = useState(false);
 
   const [classes, setClasses] =
     useState<ClassItem[]>([]);
@@ -1290,24 +1291,25 @@ const ManageUsersScreen: React.FC<Props> = ({
                   Password *
                 </Text>
 
-                <TextInput
-                  style={styles.input}
-                  value={
-                    formData.password
-                  }
-                  onChangeText={(
-                    text
-                  ) =>
-                    setFormData({
-                      ...formData,
-                      password:
-                        text,
-                    })
-                  }
-                  placeholder="Min 6 characters"
-                  placeholderTextColor="#94A3B8"
-                  secureTextEntry
-                />
+                <View style={[styles.input, { flexDirection: 'row', alignItems: 'center', paddingVertical: 0, paddingRight: 12 }]}>
+                  <TextInput
+                    style={{ flex: 1, paddingVertical: 12, fontSize: 15, color: '#0F172A' }}
+                    value={formData.password}
+                    onChangeText={(text) =>
+                      setFormData({
+                        ...formData,
+                        password: text,
+                      })
+                    }
+                    placeholder="Min 6 characters"
+                    placeholderTextColor="#94A3B8"
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                  />
+                  <TouchableOpacity onPress={() => setShowPassword(!showPassword)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="#64748B" />
+                  </TouchableOpacity>
+                </View>
               </View>
 
               {/* ROLE */}

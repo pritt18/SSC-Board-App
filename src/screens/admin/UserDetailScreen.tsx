@@ -258,6 +258,7 @@ const UserDetailScreen: React.FC<Props> = ({
   const [editMedium, setEditMedium] = useState<string>('english');
   const [editClassId, setEditClassId] = useState<number | null>(null);
   const [editPassword, setEditPassword] = useState('');
+  const [showEditPassword, setShowEditPassword] = useState(false);
   const [savingFullProfile, setSavingFullProfile] = useState(false);
   const [fullEditError, setFullEditError] = useState<string | null>(null);
 
@@ -270,6 +271,7 @@ const UserDetailScreen: React.FC<Props> = ({
     setEditMedium(user.medium || 'english');
     setEditClassId(user.class_id || null);
     setEditPassword('');
+    setShowEditPassword(false);
     setFullEditError(null);
     setShowFullEditModal(true);
   };
@@ -2915,13 +2917,20 @@ const UserDetailScreen: React.FC<Props> = ({
               </View>
 
               <Text style={{ fontSize: 13, fontWeight: '600', color: '#334155', marginBottom: 4 }}>Reset Password (Optional)</Text>
-              <TextInput
-                style={{ borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 8, padding: 10, fontSize: 15, marginBottom: 16, color: '#0F172A', backgroundColor: '#FFF' }}
-                value={editPassword}
-                onChangeText={setEditPassword}
-                placeholder="Leave blank to keep current password"
-                secureTextEntry
-              />
+              <View style={{ flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 8, paddingHorizontal: 12, marginBottom: 16, backgroundColor: '#FFF' }}>
+                <TextInput
+                  style={{ flex: 1, paddingVertical: 10, fontSize: 15, color: '#0F172A' }}
+                  value={editPassword}
+                  onChangeText={setEditPassword}
+                  placeholder="Leave blank to keep current password"
+                  placeholderTextColor="#94A3B8"
+                  secureTextEntry={!showEditPassword}
+                  autoCapitalize="none"
+                />
+                <TouchableOpacity onPress={() => setShowEditPassword(!showEditPassword)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Ionicons name={showEditPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="#64748B" />
+                </TouchableOpacity>
+              </View>
             </ScrollView>
 
             <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10, padding: 16, borderTopWidth: 1, borderTopColor: '#F1F5F9', backgroundColor: '#F8FAFC' }}>
