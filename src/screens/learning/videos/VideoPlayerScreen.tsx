@@ -1066,7 +1066,7 @@ const VideoPlayerScreen: React.FC<Props> = ({ navigation, route }) => {
         {/* Security Forensic Watermark Overlay (Mobile & Web) */}
         <View pointerEvents="none" style={styles.securityWatermarkOverlay}>
           <Text style={styles.securityWatermarkText}>
-            {user?.full_name || user?.username || 'SSC Student'} • {user?.email || 'Protected Material'} • SSC Board
+            SSC Board • Protected Educational Material
           </Text>
           <Text style={styles.securityWatermarkSub}>
             CONFIDENTIAL • DO NOT SHARE OR SCREEN RECORD

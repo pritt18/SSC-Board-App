@@ -452,10 +452,9 @@ const PdfDisplayScreen: React.FC<Props> = ({ route, navigation }) => {
         watermarkDiv.style.opacity = '0.13';
         watermarkDiv.style.zIndex = '5';
         watermarkDiv.style.userSelect = 'none';
-        const studentLabel = user?.full_name || user?.username || 'SSC Student';
         watermarkDiv.innerHTML = `
           <span style="font-size: 20px; font-weight: 800; color: ${isDark ? '#ffffff' : '#000000'}; letter-spacing: 1.5px; text-transform: uppercase;">
-            ${studentLabel} • SSC Board
+            SSC BOARD
           </span>
           <span style="font-size: 11px; font-weight: 700; color: ${isDark ? '#cbd5e1' : '#334155'}; margin-top: 6px;">
             PROTECTED EDUCATIONAL CONTENT • STRICTLY CONFIDENTIAL

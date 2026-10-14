@@ -962,10 +962,8 @@ const buildViewerHtml = (pdfJsSource: string, pdfWorkerSource: string) => `
 
       currentPage = startPage;
       updateNavState();
-      if (window.__USER_WATERMARK__) {
-        var wmEl = document.getElementById('wm-user-text');
-        if (wmEl) wmEl.textContent = window.__USER_WATERMARK__ + ' • SSC Board';
-      }
+      var wmEl = document.getElementById('wm-user-text');
+      if (wmEl) wmEl.textContent = 'SSC BOARD';
       renderPage(currentPage);
     }
 
@@ -1094,7 +1092,7 @@ const PdfDisplayScreen: React.FC<Props> = ({ route, navigation }) => {
     window.__PDF_FULL_URI__ = ${JSON.stringify(localPdfUri || '')};
     window.__PDF_CLOUD_URL__ = ${JSON.stringify(cloudPdfUrl || '')};
     window.__PDF_FILE_URI__ = ${JSON.stringify(pdfUrl || '')};
-    window.__USER_WATERMARK__ = ${JSON.stringify(user?.full_name || user?.username || 'SSC Student')};
+    window.__USER_WATERMARK__ = 'SSC BOARD';
     true;
   `;
 
