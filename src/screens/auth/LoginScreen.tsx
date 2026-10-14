@@ -10,6 +10,7 @@ import {
   Alert,
   ActivityIndicator,
   Image,
+  ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
@@ -55,76 +56,84 @@ const LoginScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <View style={styles.content}>
-        <Image
-          source={require('../../../assets/images/logo.png')}
-          style={styles.logoImage}
-          resizeMode="contain"
-        />
-        <Text style={styles.subtitle}>Maharashtra Board Learning</Text>
-
-        <View style={styles.demoInfo}>
-          <Text style={styles.demoText}>💡 Demo Credentials:</Text>
-          <Text style={styles.demoCreds}>👑 Admin: admin@sscboard.com / Admin@123</Text>
-          <Text style={styles.demoCreds}>🎒 Student: student@sscboard.com / Student@123</Text>
-          <Text style={styles.demoNote}>Or register a new account below</Text>
-        </View>
-
-        <TextInput
-          style={styles.input}
-          placeholder={t('email') || 'Email'}
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-        />
-
-        <View style={styles.passwordContainer}>
-          <TextInput
-            style={styles.passwordInput}
-            placeholder={t('password') || 'Password'}
-            placeholderTextColor="#9CA3AF"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry={!showPassword}
-            autoCapitalize="none"
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.card}>
+          <Image
+            source={require('../../../assets/images/logo.png')}
+            style={styles.logoImage}
+            resizeMode="contain"
           />
-          <TouchableOpacity
-            style={styles.eyeButton}
-            onPress={() => setShowPassword(!showPassword)}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-              size={22}
-              color="#64748B"
+          <Text style={styles.subtitle}>Maharashtra Board Learning</Text>
+
+          <View style={styles.demoInfo}>
+            <Text style={styles.demoText}>💡 Demo Credentials:</Text>
+            <Text style={styles.demoCreds}>👑 Admin: admin@sscboard.com / Admin@123</Text>
+            <Text style={styles.demoCreds}>🎒 Student: student@sscboard.com / Student@123</Text>
+            <Text style={styles.demoNote}>Or register a new account below</Text>
+          </View>
+
+          <TextInput
+            style={styles.input}
+            placeholder={t('email') || 'Email'}
+            placeholderTextColor="#94A3B8"
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+          />
+
+          <View style={styles.passwordContainer}>
+            <TextInput
+              style={styles.passwordInput}
+              placeholder={t('password') || 'Password'}
+              placeholderTextColor="#94A3B8"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+              autoCapitalize="none"
             />
+            <TouchableOpacity
+              style={styles.eyeButton}
+              onPress={() => setShowPassword(!showPassword)}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                size={22}
+                color="#64748B"
+              />
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity 
+            style={styles.button} 
+            onPress={handleLogin} 
+            disabled={isLoading}
+            activeOpacity={0.8}
+          >
+            {isLoading ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text style={styles.buttonText}>{t('login') || 'Login'}</Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.linkRow} onPress={() => navigation.navigate('Register')} activeOpacity={0.7}>
+            <Text style={styles.link}>Don't have an account? Register</Text>
+            <Ionicons name="arrow-forward" size={16} color="#007AFF" style={{ marginLeft: 6 }} />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.linkRow} onPress={() => navigation.navigate('ForgotPassword')} activeOpacity={0.7}>
+            <Text style={styles.link}>Forgot Password?</Text>
+            <Ionicons name="arrow-forward" size={16} color="#007AFF" style={{ marginLeft: 6 }} />
           </TouchableOpacity>
         </View>
-
-        <TouchableOpacity 
-          style={styles.button} 
-          onPress={handleLogin} 
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <ActivityIndicator color="white" />
-          ) : (
-            <Text style={styles.buttonText}>{t('login') || 'Login'}</Text>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.linkRow} onPress={() => navigation.navigate('Register')} activeOpacity={0.7}>
-          <Text style={styles.link}>Don't have an account? Register</Text>
-          <Ionicons name="arrow-forward" size={16} color="#007AFF" style={{ marginLeft: 6 }} />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.linkRow} onPress={() => navigation.navigate('ForgotPassword')} activeOpacity={0.7}>
-          <Text style={styles.link}>Forgot Password?</Text>
-          <Ionicons name="arrow-forward" size={16} color="#007AFF" style={{ marginLeft: 6 }} />
-        </TouchableOpacity>
-      </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 };
@@ -132,81 +141,97 @@ const LoginScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F8FAFC',
   },
-  content: {
-    flex: 1,
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: 'center',
-    padding: 20,
-    maxWidth: 460,
-    width: '100%',
-    alignSelf: 'center',
+    alignItems: 'center',
+    padding: Platform.OS === 'web' ? 32 : 16,
   },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 10,
-    color: '#007AFF',
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: Platform.OS === 'web' ? 36 : 22,
+    maxWidth: 480,
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    ...(Platform.OS === 'web'
+      ? ({
+          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04)',
+        } as any)
+      : {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.08,
+          shadowRadius: 12,
+          elevation: 4,
+        }),
   },
   logoImage: {
-    width: 220,
-    height: 150,
+    width: Platform.OS === 'web' ? 270 : 200,
+    height: Platform.OS === 'web' ? 180 : 133,
     alignSelf: 'center',
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 15,
     textAlign: 'center',
-    marginBottom: 30,
-    color: '#666',
+    marginBottom: 20,
+    color: '#64748B',
+    fontWeight: '500',
   },
   demoInfo: {
-    backgroundColor: '#E8F4FD',
-    padding: 15,
-    borderRadius: 10,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    padding: 14,
+    borderRadius: 12,
     marginBottom: 20,
   },
   demoText: {
     fontSize: 14,
-    fontWeight: 'bold',
-    color: '#007AFF',
-    marginBottom: 5,
+    fontWeight: '700',
+    color: '#1D4ED8',
+    marginBottom: 6,
   },
   demoCreds: {
-    fontSize: 14,
-    color: '#333',
+    fontSize: 13,
+    color: '#334155',
     marginTop: 3,
+    fontWeight: '500',
   },
   demoNote: {
     fontSize: 12,
-    color: '#666',
+    color: '#64748B',
     marginTop: 8,
     fontStyle: 'italic',
   },
   input: {
-    backgroundColor: 'white',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 15,
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#E2E8F0',
     fontSize: 15,
     color: '#0F172A',
   },
   passwordContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'white',
-    borderRadius: 10,
-    marginBottom: 15,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#ddd',
-    paddingHorizontal: 15,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 16,
   },
   passwordInput: {
     flex: 1,
-    paddingVertical: 15,
+    paddingVertical: 14,
     paddingRight: 10,
     fontSize: 15,
     color: '#0F172A',
@@ -218,10 +243,18 @@ const styles = StyleSheet.create({
   },
   button: {
     backgroundColor: '#007AFF',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 15,
+    paddingVertical: 15,
+    borderRadius: 12,
+    marginBottom: 12,
     alignItems: 'center',
+    justifyContent: 'center',
+    ...(Platform.OS === 'web'
+      ? ({
+          boxShadow: '0 4px 6px -1px rgba(0, 122, 255, 0.25)',
+        } as any)
+      : {
+          elevation: 2,
+        }),
   },
   buttonText: {
     color: 'white',
@@ -238,7 +271,7 @@ const styles = StyleSheet.create({
   link: {
     color: '#007AFF',
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
   },
 });
 

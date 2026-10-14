@@ -70,15 +70,15 @@ const RegisterScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.content}>
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+        <View style={styles.card}>
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}
             accessibilityLabel="Back to Login"
             activeOpacity={0.7}
           >
-            <Ionicons name="arrow-back" size={22} color="#007AFF" />
+            <Ionicons name="arrow-back" size={20} color="#007AFF" />
             <Text style={styles.backButtonText}>Back to Login</Text>
           </TouchableOpacity>
 
@@ -92,6 +92,7 @@ const RegisterScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
           <TextInput
             style={styles.input}
             placeholder="Full Name"
+            placeholderTextColor="#94A3B8"
             value={fullName}
             onChangeText={setFullName}
           />
@@ -99,6 +100,7 @@ const RegisterScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
           <TextInput
             style={styles.input}
             placeholder="Username"
+            placeholderTextColor="#94A3B8"
             value={username}
             onChangeText={setUsername}
             autoCapitalize="none"
@@ -107,6 +109,7 @@ const RegisterScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
           <TextInput
             style={styles.input}
             placeholder={t('email') || 'Email'}
+            placeholderTextColor="#94A3B8"
             value={email}
             onChangeText={setEmail}
             autoCapitalize="none"
@@ -117,7 +120,7 @@ const RegisterScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
             <TextInput
               style={styles.passwordInput}
               placeholder={t('password') || 'Password (min 6 chars)'}
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor="#94A3B8"
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
@@ -142,17 +145,31 @@ const RegisterScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
             <TouchableOpacity
               style={[styles.mediumChip, medium === 'english' && styles.mediumChipSelected]}
               onPress={() => setMedium('english')}
+              activeOpacity={0.7}
             >
+              <Ionicons 
+                name="book-outline" 
+                size={16} 
+                color={medium === 'english' ? '#007AFF' : '#64748B'} 
+                style={{ marginRight: 6 }} 
+              />
               <Text style={[styles.mediumChipText, medium === 'english' && styles.mediumChipTextSelected]}>
-                English Medium
+                English
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.mediumChip, medium === 'marathi' && styles.mediumChipSelected]}
               onPress={() => setMedium('marathi')}
+              activeOpacity={0.7}
             >
+              <Ionicons 
+                name="book-outline" 
+                size={16} 
+                color={medium === 'marathi' ? '#007AFF' : '#64748B'} 
+                style={{ marginRight: 6 }} 
+              />
               <Text style={[styles.mediumChipText, medium === 'marathi' && styles.mediumChipTextSelected]}>
-                Marathi Medium
+                Marathi
               </Text>
             </TouchableOpacity>
           </View>
@@ -161,6 +178,7 @@ const RegisterScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
             style={styles.button} 
             onPress={handleRegister} 
             disabled={isLoading}
+            activeOpacity={0.8}
           >
             {isLoading ? (
               <ActivityIndicator color="white" />
@@ -169,8 +187,13 @@ const RegisterScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+          <TouchableOpacity 
+            style={styles.linkRow} 
+            onPress={() => navigation.navigate('Login')}
+            activeOpacity={0.7}
+          >
             <Text style={styles.link}>Already have an account? Login</Text>
+            <Ionicons name="arrow-forward" size={16} color="#007AFF" style={{ marginLeft: 6 }} />
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -179,111 +202,87 @@ const RegisterScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  mediumLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 8,
-    marginTop: 4,
-  },
-  mediumRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 16,
-  },
-  mediumChip: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#fff',
-    alignItems: 'center',
-  },
-  mediumChipSelected: {
-    borderColor: '#007AFF',
-    backgroundColor: '#EFF6FF',
-  },
-  mediumChipText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#6B7280',
-  },
-  mediumChipTextSelected: {
-    color: '#007AFF',
-  },
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F8FAFC',
   },
   scrollContent: {
     flexGrow: 1,
-  },
-  content: {
-    flex: 1,
     justifyContent: 'center',
-    padding: 20,
-    minHeight: 500,
+    alignItems: 'center',
+    padding: Platform.OS === 'web' ? 32 : 16,
+  },
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: Platform.OS === 'web' ? 36 : 22,
     maxWidth: 480,
     width: '100%',
-    alignSelf: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    ...(Platform.OS === 'web'
+      ? ({
+          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04)',
+        } as any)
+      : {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.08,
+          shadowRadius: 12,
+          elevation: 4,
+        }),
   },
   backButton: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    marginBottom: 12,
+    marginBottom: 16,
     paddingVertical: 6,
     paddingHorizontal: 4,
   },
   backButtonText: {
     marginLeft: 6,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
     color: '#007AFF',
   },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 10,
-    color: '#007AFF',
-  },
   logoImage: {
-    width: 200,
-    height: 136,
+    width: Platform.OS === 'web' ? 260 : 190,
+    height: Platform.OS === 'web' ? 173 : 127,
     alignSelf: 'center',
     marginBottom: 6,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 15,
     textAlign: 'center',
-    marginBottom: 30,
-    color: '#666',
+    marginBottom: 20,
+    color: '#64748B',
+    fontWeight: '500',
   },
   input: {
-    backgroundColor: 'white',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 15,
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    marginBottom: 14,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#E2E8F0',
     fontSize: 15,
     color: '#0F172A',
   },
   passwordContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'white',
-    borderRadius: 10,
-    marginBottom: 15,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    marginBottom: 14,
     borderWidth: 1,
-    borderColor: '#ddd',
-    paddingHorizontal: 15,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 16,
   },
   passwordInput: {
     flex: 1,
-    paddingVertical: 15,
+    paddingVertical: 14,
     paddingRight: 10,
     fontSize: 15,
     color: '#0F172A',
@@ -293,22 +292,72 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  mediumLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#475569',
+    marginBottom: 8,
+    marginTop: 2,
+  },
+  mediumRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 20,
+  },
+  mediumChip: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
+  },
+  mediumChipSelected: {
+    borderColor: '#007AFF',
+    backgroundColor: '#EFF6FF',
+  },
+  mediumChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  mediumChipTextSelected: {
+    color: '#007AFF',
+  },
   button: {
     backgroundColor: '#007AFF',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 15,
+    paddingVertical: 15,
+    borderRadius: 12,
+    marginBottom: 14,
     alignItems: 'center',
+    justifyContent: 'center',
+    ...(Platform.OS === 'web'
+      ? ({
+          boxShadow: '0 4px 6px -1px rgba(0, 122, 255, 0.25)',
+        } as any)
+      : {
+          elevation: 2,
+        }),
   },
   buttonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
   },
+  linkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+    paddingVertical: 6,
+  },
   link: {
     color: '#007AFF',
-    textAlign: 'center',
-    marginTop: 10,
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 
