@@ -1,32 +1,88 @@
-import React from 'react';
-
+import React, { useEffect, useRef } from 'react';
 import {
-  Image,
+  Animated,
+  Platform,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
 
 import { COLORS } from '../../constants/colors';
 
+const isWeb = Platform.OS === 'web';
+
 const SplashScreen = () => {
+  const scaleAnim = useRef(new Animated.Value(0.2)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
+  const textFadeAnim = useRef(new Animated.Value(0)).current;
+  const textTranslateAnim = useRef(new Animated.Value(14)).current;
+
+  useEffect(() => {
+    // 1. Pop-up spring bounce effect on logo entry
+    Animated.parallel([
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        friction: 5,
+        tension: 45,
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacityAnim, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      // 2. Smooth fade and slide up for subtitles
+      Animated.parallel([
+        Animated.timing(textFadeAnim, {
+          toValue: 1,
+          duration: 350,
+          useNativeDriver: true,
+        }),
+        Animated.timing(textTranslateAnim, {
+          toValue: 0,
+          duration: 350,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    });
+  }, [scaleAnim, opacityAnim, textFadeAnim, textTranslateAnim]);
+
   return (
     <View style={styles.container}>
-
-      <Image
+      <Animated.Image
         source={require('../../../assets/images/logo.png')}
-        style={styles.logoImage}
+        style={[
+          styles.logoImage,
+          {
+            opacity: opacityAnim,
+            transform: [{ scale: scaleAnim }],
+          },
+        ]}
         resizeMode="contain"
       />
 
-      <Text style={styles.subtitle}>
+      <Animated.Text
+        style={[
+          styles.subtitle,
+          {
+            opacity: textFadeAnim,
+            transform: [{ translateY: textTranslateAnim }],
+          },
+        ]}
+      >
         Learn Anytime, Anywhere
-      </Text>
+      </Animated.Text>
 
-      <Text style={styles.offline}>
+      <Animated.Text
+        style={[
+          styles.offline,
+          {
+            opacity: textFadeAnim,
+          },
+        ]}
+      >
         100% Offline Learning
-      </Text>
-
+      </Animated.Text>
     </View>
   );
 };
@@ -43,23 +99,29 @@ const styles = StyleSheet.create({
   },
 
   logoImage: {
-    width: 260,
-    height: 176,
-    marginBottom: 8,
+    width: isWeb ? 500 : 260,
+    height: isWeb ? 330 : 176,
+    maxWidth: '90%',
+    maxHeight: isWeb ? 360 : 200,
+    marginBottom: isWeb ? 16 : 8,
   },
 
   subtitle: {
     color: COLORS.textSecondary,
-    fontSize: 16,
-    marginTop: 6,
+    fontSize: isWeb ? 22 : 16,
+    marginTop: isWeb ? 10 : 6,
     fontWeight: '600',
+    letterSpacing: isWeb ? 0.6 : 0,
+    textAlign: 'center',
   },
 
   offline: {
     position: 'absolute',
-    bottom: 50,
+    bottom: isWeb ? 45 : 50,
     color: COLORS.textSecondary,
-    fontSize: 14,
+    fontSize: isWeb ? 16 : 14,
     fontWeight: '600',
+    letterSpacing: isWeb ? 0.4 : 0,
+    textAlign: 'center',
   },
 });
