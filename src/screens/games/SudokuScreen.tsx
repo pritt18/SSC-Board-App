@@ -7,6 +7,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
 
 // A small pool of easy 9x9 puzzles. 0 = blank cell.
@@ -411,7 +412,8 @@ const SudokuScreen: React.FC<any> = ({ navigation }) => {
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backText}>‹ Back</Text>
+          <Ionicons name="arrow-back" size={22} color={COLORS.primary} />
+          <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Sudoku</Text>
         <Text style={styles.subtitle}>Fill every row, column and 3×3 box with 1-9</Text>
@@ -500,12 +502,15 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 8,
   },
   backText: {
     fontSize: 15,
     fontWeight: '600',
     color: COLORS.primary,
+    marginLeft: 4,
   },
   title: {
     fontSize: 24,

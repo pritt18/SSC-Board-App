@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { COLORS } from '../../constants/colors';
+import { Ionicons } from '@expo/vector-icons';
 
 interface Game {
   id: number;
@@ -149,6 +150,10 @@ const GamesScreen: React.FC = ({ navigation }: any) => {
               <Text style={styles.gameIcon}>{game.icon}</Text>
               <Text style={styles.gameName}>{game.name}</Text>
               <Text style={styles.gameDescription}>{game.description}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 8 }}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.primary, marginRight: 4 }}>Play</Text>
+                <Ionicons name="arrow-forward" size={14} color={COLORS.primary} />
+              </View>
             </TouchableOpacity>
           ))}
         </View>

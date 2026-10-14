@@ -185,7 +185,10 @@ const ParentDashboardScreen: React.FC = () => {
                   <View style={styles.actionIconWrap}>
                     <Ionicons name={action.icon as any} size={22} color={COLORS.primary} />
                   </View>
-                  <Text style={styles.actionLabel}>{action.label}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                    <Text style={styles.actionLabel}>{action.label}</Text>
+                    <Ionicons name="chevron-forward" size={14} color={COLORS.textSecondary} />
+                  </View>
                 </TouchableOpacity>
               ))}
             </View>

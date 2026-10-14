@@ -21,6 +21,7 @@ import {
 
 import { COLORS } from '../../constants/colors';
 import { executeQuery } from '../../database/database';
+import { Ionicons } from '@expo/vector-icons';
 
 import {
   LearningStackParamList,
@@ -424,9 +425,7 @@ const QuizScreen: React.FC<Props> = ({
               navigation.goBack()
             }
           >
-            <Text style={styles.backText}>
-              ‹
-            </Text>
+            <Ionicons name="arrow-back" size={24} color={COLORS.textPrimary} />
           </Pressable>
 
           <View
@@ -651,17 +650,25 @@ const QuizScreen: React.FC<Props> = ({
             }
             onPress={handleNext}
           >
-            <Text
-              style={
-                styles
-                  .primaryButtonText
-              }
-            >
-              {currentQuestionIndex ===
-              quiz.questions.length - 1
-                ? 'View Result'
-                : 'Next Question'}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+              <Text
+                style={
+                  styles
+                    .primaryButtonText
+                }
+              >
+                {currentQuestionIndex ===
+                quiz.questions.length - 1
+                  ? 'View Result'
+                  : 'Next Question'}
+              </Text>
+              <Ionicons
+                name={currentQuestionIndex === quiz.questions.length - 1 ? 'trophy' : 'arrow-forward'}
+                size={18}
+                color="#FFFFFF"
+                style={{ marginLeft: 8 }}
+              />
+            </View>
           </Pressable>
         )}
       </ScrollView>

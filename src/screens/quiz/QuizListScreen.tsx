@@ -18,6 +18,7 @@ import {
 
 import { COLORS } from '../../constants/colors';
 import { executeQuery } from '../../database/database';
+import { Ionicons } from '@expo/vector-icons';
 
 import {
   LearningStackParamList,
@@ -122,9 +123,7 @@ const QuizListScreen: React.FC<Props> = ({
               navigation.goBack()
             }
           >
-            <Text style={styles.backText}>
-              ‹
-            </Text>
+            <Ionicons name="arrow-back" size={24} color={COLORS.textPrimary} />
           </Pressable>
 
           <View
@@ -245,9 +244,7 @@ const QuizListScreen: React.FC<Props> = ({
                     </View>
                   </View>
 
-                  <Text style={styles.arrow}>
-                    ›
-                  </Text>
+                  <Ionicons name="chevron-forward" size={20} color="#94A3B8" />
                 </Pressable>
               );
             })}

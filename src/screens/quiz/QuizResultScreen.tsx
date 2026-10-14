@@ -18,6 +18,7 @@ import {
 
 import { COLORS } from '../../constants/colors';
 import { executeQuery } from '../../database/database';
+import { Ionicons } from '@expo/vector-icons';
 
 import {
   LearningStackParamList,
@@ -301,13 +302,16 @@ const QuizResultScreen: React.FC<Props> = ({
             )
           }
         >
-          <Text
-            style={
-              styles.primaryButtonText
-            }
-          >
-            Try Again
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name="refresh" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
+            <Text
+              style={
+                styles.primaryButtonText
+              }
+            >
+              Try Again
+            </Text>
+          </View>
         </Pressable>
 
         {/* BACK */}
@@ -320,13 +324,16 @@ const QuizResultScreen: React.FC<Props> = ({
             navigation.goBack()
           }
         >
-          <Text
-            style={
-              styles.secondaryButtonText
-            }
-          >
-            Back
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name="arrow-back" size={18} color={COLORS.primary} style={{ marginRight: 6 }} />
+            <Text
+              style={
+                styles.secondaryButtonText
+              }
+            >
+              Back to Quizzes
+            </Text>
+          </View>
         </Pressable>
 
         <Text

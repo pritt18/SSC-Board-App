@@ -14,6 +14,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { COLORS } from '../../../constants/colors';
 import { useAuth } from '../../../context/AuthContext';
 import { LicenseService } from '../../../services/licenseService';
+import { Ionicons } from '@expo/vector-icons';
 
 import {
   LearningStackParamList,
@@ -154,21 +155,24 @@ const MyClassesScreen: React.FC<Props> = ({
                   {item.name}
                 </Text>
 
-                <Text
-                  style={[
-                    styles.status,
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 4 }}>
+                  <Text
+                    style={[
+                      styles.status,
 
-                    isLicensed
-                      ? styles.unlockedText
-                      : styles.lockedText,
-                  ]}
-                >
-                  {checkingLicense
-                    ? 'Checking...'
-                    : isLicensed
-                    ? '✓ Unlocked'
-                    : '🔑 Activate License'}
-                </Text>
+                      isLicensed
+                        ? styles.unlockedText
+                        : styles.lockedText,
+                    ]}
+                  >
+                    {checkingLicense
+                      ? 'Checking...'
+                      : isLicensed
+                      ? '✓ Unlocked'
+                      : '🔑 Activate License'}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={14} color={isLicensed ? COLORS.success : COLORS.primary} style={{ marginLeft: 2 }} />
+                </View>
               </Pressable>
             );
           })}

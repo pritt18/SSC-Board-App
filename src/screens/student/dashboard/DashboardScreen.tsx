@@ -13,6 +13,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { useLanguage } from '../../../context/LanguageContext';
 import { executeQuery } from '../../../database/database';
 import { COLORS } from '../../../constants/colors';
+import { Ionicons } from '@expo/vector-icons';
 
 interface DashboardStats {
   totalVideos: number;
@@ -207,49 +208,73 @@ const DashboardScreen: React.FC = ({ navigation }: any) => {
             <TouchableOpacity 
               style={styles.actionCard}
               onPress={() => navigation.navigate('Learning')}
+              activeOpacity={0.7}
             >
               <Text style={styles.actionIcon}>📚</Text>
-              <Text style={styles.actionText}>Continue Learning</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={styles.actionText}>Continue Learning</Text>
+                <Ionicons name="chevron-forward" size={14} color="#94A3B8" style={{ marginLeft: 2 }} />
+              </View>
             </TouchableOpacity>
 
             <TouchableOpacity 
               style={styles.actionCard}
               onPress={() => navigation.navigate('Progress')}
+              activeOpacity={0.7}
             >
               <Text style={styles.actionIcon}>📊</Text>
-              <Text style={styles.actionText}>View Progress</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={styles.actionText}>View Progress</Text>
+                <Ionicons name="chevron-forward" size={14} color="#94A3B8" style={{ marginLeft: 2 }} />
+              </View>
             </TouchableOpacity>
 
             <TouchableOpacity 
               style={styles.actionCard}
               onPress={() => navigation.navigate('Games')}
+              activeOpacity={0.7}
             >
               <Text style={styles.actionIcon}>🎮</Text>
-              <Text style={styles.actionText}>Play Games</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={styles.actionText}>Play Games</Text>
+                <Ionicons name="chevron-forward" size={14} color="#94A3B8" style={{ marginLeft: 2 }} />
+              </View>
             </TouchableOpacity>
 
             <TouchableOpacity 
               style={styles.actionCard}
               onPress={() => navigation.navigate('Profile')}
+              activeOpacity={0.7}
             >
               <Text style={styles.actionIcon}>👤</Text>
-              <Text style={styles.actionText}>Profile</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={styles.actionText}>Profile</Text>
+                <Ionicons name="chevron-forward" size={14} color="#94A3B8" style={{ marginLeft: 2 }} />
+              </View>
             </TouchableOpacity>
 
             <TouchableOpacity 
               style={styles.actionCard}
               onPress={() => navigation.navigate('StudentAssignments')}
+              activeOpacity={0.7}
             >
               <Text style={styles.actionIcon}>📋</Text>
-              <Text style={styles.actionText}>Assignments</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={styles.actionText}>Assignments</Text>
+                <Ionicons name="chevron-forward" size={14} color="#94A3B8" style={{ marginLeft: 2 }} />
+              </View>
             </TouchableOpacity>
 
             <TouchableOpacity 
               style={styles.actionCard}
               onPress={() => navigation.navigate('StudentNotifications')}
+              activeOpacity={0.7}
             >
               <Text style={styles.actionIcon}>🔔</Text>
-              <Text style={styles.actionText}>Notifications</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={styles.actionText}>Notifications</Text>
+                <Ionicons name="chevron-forward" size={14} color="#94A3B8" style={{ marginLeft: 2 }} />
+              </View>
             </TouchableOpacity>
           </View>
         </View>

@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { COLORS } from '../../constants/colors';
+import { Ionicons } from '@expo/vector-icons';
 
 import {
   LearningStackParamList,
@@ -202,9 +203,7 @@ const LearningContentScreen: React.FC<Props> = ({
             style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
-            <Text style={styles.backText}>
-              ‹
-            </Text>
+            <Ionicons name="arrow-back" size={24} color={COLORS.textPrimary} />
           </Pressable>
 
           <View style={styles.headerContent}>
@@ -271,9 +270,12 @@ const LearningContentScreen: React.FC<Props> = ({
                 {item.title}
               </Text>
 
-              <Text style={styles.optionSubtitle}>
-                {item.subtitle}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginTop: 4 }}>
+                <Text style={[styles.optionSubtitle, { flex: 1 }]}>
+                  {item.subtitle}
+                </Text>
+                <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+              </View>
             </Pressable>
           ))}
         </View>

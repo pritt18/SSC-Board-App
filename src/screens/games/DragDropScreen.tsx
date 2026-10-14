@@ -11,6 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
 
 interface RoundSet {
@@ -586,8 +587,9 @@ const DragDropScreen: React.FC<any> = ({
           style={styles.backButton}
           activeOpacity={0.7}
         >
+          <Ionicons name="arrow-back" size={20} color={COLORS.primary} />
           <Text style={styles.backText}>
-            ‹ Back
+            Back
           </Text>
         </TouchableOpacity>
 
@@ -756,6 +758,9 @@ const styles = StyleSheet.create({
 
   backButton: {
     alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     marginBottom: 8,
     paddingVertical: 4,
   },

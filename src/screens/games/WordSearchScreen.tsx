@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
 
 const SIZE = 10;
@@ -159,7 +160,8 @@ const WordSearchScreen: React.FC<any> = ({ navigation }) => {
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Text style={styles.backText}>‹ Back</Text>
+            <Ionicons name="arrow-back" size={22} color={COLORS.primary} />
+            <Text style={styles.backText}>Back</Text>
           </TouchableOpacity>
           <Text style={styles.title}>Word Search</Text>
           <Text style={styles.subtitle}>
@@ -230,8 +232,8 @@ export default WordSearchScreen;
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   header: { padding: 20, paddingBottom: 10 },
-  backButton: { marginBottom: 8 },
-  backText: { fontSize: 15, fontWeight: '600', color: COLORS.primary },
+  backButton: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  backText: { fontSize: 15, fontWeight: '600', color: COLORS.primary, marginLeft: 4 },
   title: { fontSize: 24, fontWeight: '700', color: COLORS.textPrimary },
   subtitle: { fontSize: 12, color: COLORS.textSecondary, marginTop: 4 },
   grid: { alignSelf: 'center' },

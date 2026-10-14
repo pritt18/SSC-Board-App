@@ -19,7 +19,7 @@ import { useLanguage } from '../../../context/LanguageContext';
 import { executeQuery } from '../../../database/database';
 import { COLORS } from '../../../constants/colors';
 
-const ProfileScreen: React.FC = () => {
+const ProfileScreen: React.FC<{ navigation?: any }> = ({ navigation }) => {
   const { user, logout, updateUser } = useAuth();
   const { language, setLanguage, t } = useLanguage();
 
@@ -289,6 +289,18 @@ const ProfileScreen: React.FC = () => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {Boolean(navigation?.canGoBack && navigation.canGoBack()) && (
+          <TouchableOpacity
+            style={styles.screenBackButton}
+            onPress={() => navigation.goBack()}
+            accessibilityLabel="Go back"
+            activeOpacity={0.7}
+          >
+            <Ionicons name="arrow-back" size={22} color="#1E293B" />
+            <Text style={styles.screenBackText}>Back</Text>
+          </TouchableOpacity>
+        )}
+
         {/* Profile Header */}
         <View style={styles.header}>
           <View style={styles.avatar}>
@@ -766,6 +778,24 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 40,
+  },
+  screenBackButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    marginTop: 12,
+    marginLeft: 16,
+    marginBottom: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    backgroundColor: '#E2E8F0',
+  },
+  screenBackText: {
+    marginLeft: 6,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1E293B',
   },
   header: {
     backgroundColor: '#2563EB',

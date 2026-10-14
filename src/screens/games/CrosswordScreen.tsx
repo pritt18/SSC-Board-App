@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
 
 interface WordClue {
@@ -249,7 +250,8 @@ const CrosswordScreen: React.FC<any> = ({ navigation }) => {
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Text style={styles.backText}>‹ Back</Text>
+            <Ionicons name="arrow-back" size={22} color={COLORS.primary} />
+            <Text style={styles.backText}>Back</Text>
           </TouchableOpacity>
           <Text style={styles.title}>Crossword</Text>
           <Text style={styles.subtitle}>{puzzle.title}</Text>
@@ -336,12 +338,15 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 8,
   },
   backText: {
     fontSize: 15,
     fontWeight: '600',
     color: COLORS.primary,
+    marginLeft: 4,
   },
   title: {
     fontSize: 24,

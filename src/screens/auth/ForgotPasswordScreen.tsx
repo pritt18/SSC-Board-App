@@ -9,6 +9,7 @@ import {
   Platform,
   Alert,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../../context/LanguageContext';
 
 const ForgotPasswordScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
@@ -44,6 +45,16 @@ const ForgotPasswordScreen: React.FC<{ navigation: any }> = ({ navigation }) => 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.content}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+          accessibilityLabel="Back to Login"
+          activeOpacity={0.7}
+        >
+          <Ionicons name="arrow-back" size={22} color="#007AFF" />
+          <Text style={styles.backButtonText}>Back to Login</Text>
+        </TouchableOpacity>
+
         <Text style={styles.title}>Reset Password</Text>
         <Text style={styles.subtitle}>Enter your email to receive reset instructions</Text>
 
@@ -79,6 +90,23 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     padding: 20,
+    maxWidth: 460,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    marginBottom: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+  },
+  backButtonText: {
+    marginLeft: 6,
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#007AFF',
   },
   title: {
     fontSize: 28,

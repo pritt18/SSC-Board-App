@@ -13,6 +13,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 
 import { COLORS } from '../../constants/colors';
+import { Ionicons } from '@expo/vector-icons';
 import { executeQuery } from '../../database/database';
 import { useAuth } from '../../context/AuthContext';
 import { LearningStackParamList } from '../../navigation/navigationTypes';
@@ -104,7 +105,7 @@ const PdfViewerScreen: React.FC<Props> = ({ navigation, route }) => {
         {/* Header */}
         <View style={styles.header}>
           <Pressable style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Text style={styles.backText}>‹</Text>
+            <Ionicons name="arrow-back" size={24} color={COLORS.textPrimary} />
           </Pressable>
           <View style={styles.headerContent}>
             <Text style={styles.headerLabel}>Subject Learning</Text>
@@ -144,7 +145,10 @@ const PdfViewerScreen: React.FC<Props> = ({ navigation, route }) => {
                     </Text>
                   )}
                   
-                  <Text style={styles.openText}>Read Now →</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginTop: 6 }}>
+                    <Text style={styles.openText}>Read Now</Text>
+                    <Ionicons name="chevron-forward" size={18} color={COLORS.primary} />
+                  </View>
                 </View>
               </Pressable>
             ))}

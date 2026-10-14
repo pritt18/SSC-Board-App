@@ -18,6 +18,7 @@ import { useFocusEffect } from '@react-navigation/native';
 
 import { COLORS } from '../../../constants/colors';
 import { executeQuery } from '../../../database/database';
+import { Ionicons } from '@expo/vector-icons';
 
 import {
   LearningStackParamList,
@@ -137,9 +138,7 @@ const SubjectListScreen: React.FC<Props> = ({
               navigation.goBack()
             }
           >
-            <Text style={styles.backText}>
-              ‹
-            </Text>
+            <Ionicons name="arrow-back" size={24} color={COLORS.textPrimary} />
           </Pressable>
 
           <View style={styles.headerText}>
@@ -202,13 +201,16 @@ const SubjectListScreen: React.FC<Props> = ({
                   {subject.name_english}
                 </Text>
 
-                <Text style={styles.openText}>
-                  {typeof subject.video_count === 'number' && subject.video_count > 0
-                    ? `🎬 ${subject.video_count} Video${subject.video_count > 1 ? 's' : ''}`
-                    : typeof subject.pdf_count === 'number' && subject.pdf_count > 0
-                    ? `📄 ${subject.pdf_count} Book${subject.pdf_count > 1 ? 's' : ''}`
-                    : 'Start Learning →'}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 4 }}>
+                  <Text style={styles.openText}>
+                    {typeof subject.video_count === 'number' && subject.video_count > 0
+                      ? `🎬 ${subject.video_count} Video${subject.video_count > 1 ? 's' : ''}`
+                      : typeof subject.pdf_count === 'number' && subject.pdf_count > 0
+                      ? `📄 ${subject.pdf_count} Book${subject.pdf_count > 1 ? 's' : ''}`
+                      : 'Start Learning'}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={14} color={COLORS.primary} style={{ marginLeft: 4 }} />
+                </View>
               </Pressable>
             ))}
           </View>

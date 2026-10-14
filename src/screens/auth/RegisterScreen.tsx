@@ -72,6 +72,16 @@ const RegisterScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.content}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+            accessibilityLabel="Back to Login"
+            activeOpacity={0.7}
+          >
+            <Ionicons name="arrow-back" size={22} color="#007AFF" />
+            <Text style={styles.backButtonText}>Back to Login</Text>
+          </TouchableOpacity>
+
           <Image
             source={require('../../../assets/images/logo.png')}
             style={styles.logoImage}
@@ -217,6 +227,20 @@ const styles = StyleSheet.create({
     maxWidth: 480,
     width: '100%',
     alignSelf: 'center',
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    marginBottom: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+  },
+  backButtonText: {
+    marginLeft: 6,
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#007AFF',
   },
   title: {
     fontSize: 32,

@@ -12,6 +12,7 @@ import { useFocusEffect } from '@react-navigation/native';
 
 import { COLORS } from '../../constants/colors';
 import { executeQuery } from '../../database/database';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 
 interface AssignmentRow {
@@ -65,7 +66,8 @@ const StudentAssignmentsScreen: React.FC<any> = ({ navigation }) => {
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backText}>‹ Back</Text>
+          <Ionicons name="arrow-back" size={22} color={COLORS.primary} />
+          <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Assignments</Text>
         <Text style={styles.subtitle}>Homework from your teacher</Text>
@@ -109,8 +111,8 @@ export default StudentAssignmentsScreen;
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   header: { padding: 20, paddingBottom: 10 },
-  backButton: { marginBottom: 8 },
-  backText: { fontSize: 15, fontWeight: '600', color: COLORS.primary },
+  backButton: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  backText: { fontSize: 15, fontWeight: '600', color: COLORS.primary, marginLeft: 4 },
   title: { fontSize: 24, fontWeight: '700', color: COLORS.textPrimary },
   subtitle: { fontSize: 13, color: COLORS.textSecondary, marginTop: 2 },
   listContent: { padding: 20, paddingBottom: 40 },

@@ -115,12 +115,14 @@ const LoginScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
           )}
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+        <TouchableOpacity style={styles.linkRow} onPress={() => navigation.navigate('Register')} activeOpacity={0.7}>
           <Text style={styles.link}>Don't have an account? Register</Text>
+          <Ionicons name="arrow-forward" size={16} color="#007AFF" style={{ marginLeft: 6 }} />
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
+        <TouchableOpacity style={styles.linkRow} onPress={() => navigation.navigate('ForgotPassword')} activeOpacity={0.7}>
           <Text style={styles.link}>Forgot Password?</Text>
+          <Ionicons name="arrow-forward" size={16} color="#007AFF" style={{ marginLeft: 6 }} />
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -226,10 +228,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  linkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+    paddingVertical: 4,
+  },
   link: {
     color: '#007AFF',
-    textAlign: 'center',
-    marginTop: 10,
+    fontSize: 14,
+    fontWeight: '500',
   },
 });
 

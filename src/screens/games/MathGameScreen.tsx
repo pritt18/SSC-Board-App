@@ -6,6 +6,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
 
 interface Question {
@@ -194,7 +195,8 @@ const MathGameScreen: React.FC<any> = ({ navigation }) => {
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backText}>‹ Back</Text>
+          <Ionicons name="arrow-back" size={22} color={COLORS.primary} />
+          <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Math Game</Text>
         {!finished && (
@@ -259,8 +261,8 @@ export default MathGameScreen;
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   header: { padding: 20, paddingBottom: 10 },
-  backButton: { marginBottom: 8 },
-  backText: { fontSize: 15, fontWeight: '600', color: COLORS.primary },
+  backButton: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  backText: { fontSize: 15, fontWeight: '600', color: COLORS.primary, marginLeft: 4 },
   title: { fontSize: 24, fontWeight: '700', color: COLORS.textPrimary },
   progress: { fontSize: 13, color: COLORS.textSecondary, marginTop: 4 },
   content: { padding: 20 },

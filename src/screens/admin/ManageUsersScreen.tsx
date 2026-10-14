@@ -1010,18 +1010,22 @@ const ManageUsersScreen: React.FC<Props> = ({
                     </View>
                   </View>
 
-                  {/* ACTIVE / INACTIVE DOT */}
+                  {/* ACTIVE / INACTIVE DOT & CHEVRON */}
 
-                  <View
-                    style={[
-                      styles.statusDot,
-                      Number(
-                        user.is_active
-                      ) === 1
-                        ? styles.activeDot
-                        : styles.inactiveDot,
-                    ]}
-                  />
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 8 }}>
+                    <View
+                      style={[
+                        styles.statusDot,
+                        { marginLeft: 0, marginRight: 6 },
+                        Number(
+                          user.is_active
+                        ) === 1
+                          ? styles.activeDot
+                          : styles.inactiveDot,
+                      ]}
+                    />
+                    <Ionicons name="chevron-forward" size={18} color={COLORS.textSecondary} />
+                  </View>
                 </TouchableOpacity>
 
                 {/* ==================================================== */}
