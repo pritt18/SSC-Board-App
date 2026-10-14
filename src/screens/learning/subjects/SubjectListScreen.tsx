@@ -36,6 +36,8 @@ interface SubjectItem {
   icon?: string | null;
   color?: string | null;
   is_active: number | boolean;
+  video_count?: number;
+  pdf_count?: number;
 }
 
 const SubjectListScreen: React.FC<Props> = ({
@@ -55,11 +57,13 @@ const SubjectListScreen: React.FC<Props> = ({
       setIsLoading(true);
 
       const subjectData = await executeQuery(
-        `SELECT *
-         FROM subjects
-         WHERE class_id = ?
-         AND is_active = ?
-         ORDER BY name_english ASC`,
+        `SELECT s.*,
+                (SELECT COUNT(*) FROM videos v WHERE v.subject_id = s.id AND v.is_active = 1) as video_count,
+                (SELECT COUNT(*) FROM pdfs p WHERE p.subject_id = s.id AND p.is_active = 1) as pdf_count
+         FROM subjects s
+         WHERE s.class_id = ?
+         AND s.is_active = ?
+         ORDER BY s.name_english ASC`,
         [classId, 1],
       );
 
@@ -199,7 +203,11 @@ const SubjectListScreen: React.FC<Props> = ({
                 </Text>
 
                 <Text style={styles.openText}>
-                  Start Learning →
+                  {typeof subject.video_count === 'number' && subject.video_count > 0
+                    ? `🎬 ${subject.video_count} Video${subject.video_count > 1 ? 's' : ''}`
+                    : typeof subject.pdf_count === 'number' && subject.pdf_count > 0
+                    ? `📄 ${subject.pdf_count} Book${subject.pdf_count > 1 ? 's' : ''}`
+                    : 'Start Learning →'}
                 </Text>
               </Pressable>
             ))}

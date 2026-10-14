@@ -108,6 +108,59 @@ export const seedDatabase = async () => {
     }
 
     // -----------------------------------------
+    // 2.1 SEED DEMO STUDENT USER & LICENSES
+    // -----------------------------------------
+    console.log('Checking demo student user...');
+    const existingStudent = await executeQuery(
+      `SELECT id FROM users WHERE email = ? LIMIT 1`,
+      ['student@sscboard.com']
+    );
+
+    let studentUserId: number;
+
+    if (!existingStudent || existingStudent.length === 0) {
+      const studentHashedPassword = await simpleHash('Student@123');
+      await executeQuery(
+        `INSERT INTO users (
+          username, email, password_hash, full_name, role, medium, class_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+          'student',
+          'student@sscboard.com',
+          studentHashedPassword,
+          'Demo Student',
+          'student',
+          'english',
+          1,
+        ]
+      );
+      const createdStudent = await executeQuery(
+        `SELECT id FROM users WHERE email = ? LIMIT 1`,
+        ['student@sscboard.com']
+      );
+      studentUserId = createdStudent[0]?.id || 2;
+      console.log('Demo student user created');
+    } else {
+      studentUserId = existingStudent[0].id;
+    }
+
+    // Seed active licenses for Class 1 to 6 for the student
+    for (let c = 1; c <= 6; c++) {
+      const licenseKey = `DEMO-CLAS-000${c}-PASS`;
+      const existingLicense = await executeQuery(
+        `SELECT id FROM licenses WHERE user_id = ? AND class_id = ? LIMIT 1`,
+        [studentUserId, c]
+      );
+      if (!existingLicense || existingLicense.length === 0) {
+        await executeQuery(
+          `INSERT INTO licenses (license_key, user_id, class_id, activated_at, is_active)
+           VALUES (?, ?, ?, CURRENT_TIMESTAMP, 1)`,
+          [licenseKey, studentUserId, c]
+        );
+      }
+    }
+
+    // -----------------------------------------
     // 3. SUBJECT DATA
     // -----------------------------------------
 

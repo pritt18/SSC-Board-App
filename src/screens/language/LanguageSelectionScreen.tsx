@@ -11,6 +11,8 @@ import {
 import Button from '../../components/ui/Button';
 import { COLORS } from '../../constants/colors';
 import { useLanguage } from '../../context/LanguageContext';
+import { useAuth } from '../../context/AuthContext';
+import { executeQuery } from '../../database/database';
 
 type Language = 'marathi' | 'english';
 
@@ -25,6 +27,7 @@ const LanguageSelectionScreen: React.FC<Props> = ({
     useState<Language | null>(null);
 
   const { setLanguage } = useLanguage();
+  const { user, updateUser } = useAuth();
 
   const handleContinue = async () => {
     if (!selectedLanguage) {
@@ -33,6 +36,11 @@ const LanguageSelectionScreen: React.FC<Props> = ({
 
     try {
       await setLanguage(selectedLanguage);
+
+      if (user?.id) {
+        await executeQuery('UPDATE users SET medium = ? WHERE id = ?', [selectedLanguage, user.id]);
+        await updateUser({ medium: selectedLanguage });
+      }
 
       console.log(
         'Selected Medium:',

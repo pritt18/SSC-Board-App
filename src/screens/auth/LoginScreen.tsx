@@ -63,8 +63,8 @@ const LoginScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
 
         <View style={styles.demoInfo}>
           <Text style={styles.demoText}>💡 Demo Credentials:</Text>
-          <Text style={styles.demoCreds}>📧 admin@sscboard.com</Text>
-          <Text style={styles.demoCreds}>🔑 Admin@123</Text>
+          <Text style={styles.demoCreds}>👑 Admin: admin@sscboard.com / Admin@123</Text>
+          <Text style={styles.demoCreds}>🎒 Student: student@sscboard.com / Student@123</Text>
           <Text style={styles.demoNote}>Or register a new account below</Text>
         </View>
 

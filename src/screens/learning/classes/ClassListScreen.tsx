@@ -42,43 +42,39 @@ const MyClassesScreen: React.FC<Props> = ({
 }) => {
   const { user } = useAuth();
 
-  const [isLicensed, setIsLicensed] = useState<boolean | null>(null);
+  const [licensedClasses, setLicensedClasses] = useState<Record<number, boolean>>({});
   const [checkingLicense, setCheckingLicense] = useState(true);
 
   useFocusEffect(
     useCallback(() => {
-      const checkLicense = async () => {
-        if (!user?.id || !user?.class_id) {
-          setIsLicensed(null);
+      const checkLicenses = async () => {
+        if (!user?.id) {
           setCheckingLicense(false);
           return;
         }
         setCheckingLicense(true);
         try {
-          const licensed = await LicenseService.isClassLicensed(
-            user.id,
-            user.class_id,
-          );
-          setIsLicensed(licensed);
+          const map: Record<number, boolean> = {};
+          for (const c of classes) {
+            const licensed = await LicenseService.isClassLicensed(user.id, c.id);
+            map[c.id] = licensed;
+          }
+          setLicensedClasses(map);
         } catch (error) {
-          console.error('Error checking license:', error);
-          setIsLicensed(false);
+          console.error('Error checking licenses:', error);
         } finally {
           setCheckingLicense(false);
         }
       };
 
-      checkLicense();
+      checkLicenses();
     }, [user?.id, user?.class_id]),
   );
 
   const handleClassPress = (
     classId: number,
-    unlocked: boolean,
   ) => {
-    if (!unlocked) {
-      return;
-    }
+    const isLicensed = user?.role === 'admin' || Boolean(licensedClasses[classId]);
 
     if (isLicensed) {
       navigation.navigate('SubjectList', {
@@ -112,10 +108,9 @@ const MyClassesScreen: React.FC<Props> = ({
 
         <View style={styles.grid}>
           {classes.map(item => {
-            // Dynamically unlock the class assigned
-            // to the currently logged-in user.
-            const unlocked =
-              user?.class_id === item.id;
+            const isAssigned = user?.class_id === item.id;
+            const isLicensed = user?.role === 'admin' || Boolean(licensedClasses[item.id]);
+            const unlocked = isAssigned || isLicensed;
 
             return (
               <Pressable
@@ -123,7 +118,6 @@ const MyClassesScreen: React.FC<Props> = ({
                 onPress={() =>
                   handleClassPress(
                     item.id,
-                    unlocked,
                   )
                 }
                 style={({ pressed }) => [
@@ -133,7 +127,6 @@ const MyClassesScreen: React.FC<Props> = ({
                     styles.unlockedCard,
 
                   pressed &&
-                    unlocked &&
                     styles.pressedCard,
                 ]}
               >
@@ -165,14 +158,12 @@ const MyClassesScreen: React.FC<Props> = ({
                   style={[
                     styles.status,
 
-                    unlocked && isLicensed
+                    isLicensed
                       ? styles.unlockedText
                       : styles.lockedText,
                   ]}
                 >
-                  {!unlocked
-                    ? '🔒 Locked'
-                    : checkingLicense
+                  {checkingLicense
                     ? 'Checking...'
                     : isLicensed
                     ? '✓ Unlocked'

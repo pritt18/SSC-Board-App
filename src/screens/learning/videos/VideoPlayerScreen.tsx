@@ -351,13 +351,33 @@ const VideoPlayerScreen: React.FC<Props> = ({ navigation, route }) => {
           return;
         } else {
           const directStream = `https://drive.usercontent.google.com/download?id=${driveId}&export=download`;
-          if (isMounted) setVideoSource({ uri: directStream });
+          if (isMounted) {
+            setVideoSource({
+              uri: directStream,
+              headers: {
+                'User-Agent':
+                  'Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+              },
+            });
+          }
           return;
         }
       }
 
       // 6. Direct HTTP/HTTPS or Native file://
-      if (isMounted) setVideoSource({ uri: url });
+      if (isMounted) {
+        if (Platform.OS !== 'web' && url.startsWith('http')) {
+          setVideoSource({
+            uri: url,
+            headers: {
+              'User-Agent':
+                'Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+            },
+          });
+        } else {
+          setVideoSource({ uri: url });
+        }
+      }
     };
 
     resolveSource();
@@ -385,6 +405,7 @@ const VideoPlayerScreen: React.FC<Props> = ({ navigation, route }) => {
           video_url,
           subtitle_url,
           video_duration,
+          medium,
           sort_order
         FROM videos
         WHERE subject_id = ?
@@ -393,13 +414,13 @@ const VideoPlayerScreen: React.FC<Props> = ({ navigation, route }) => {
 
       if (user?.role !== 'admin') {
         query += ` AND is_active = 1`;
-        if (user?.medium && (user.medium === 'english' || user.medium === 'marathi')) {
-          query += ` AND (medium IS NULL OR medium = 'both' OR medium = ?)`;
-          params.push(user.medium);
-        }
       }
 
-      query += ` ORDER BY sort_order ASC, id ASC`;
+      // Order so student's chosen medium is prioritized at the top of the playlist,
+      // while ensuring all available lessons for this subject are accessible!
+      const studentMedium = user?.medium || 'english';
+      query += ` ORDER BY (CASE WHEN medium = ? OR medium = 'both' OR medium IS NULL THEN 0 ELSE 1 END) ASC, sort_order ASC, id ASC`;
+      params.push(studentMedium);
 
       const result = await executeQuery(query, params);
       const videoData = (result as VideoItem[]) || [];
@@ -997,22 +1018,28 @@ const VideoPlayerScreen: React.FC<Props> = ({ navigation, route }) => {
           isLandscape ? styles.videoContainerLandscape : styles.videoContainerPortrait,
         ]}
       >
-        <Video
-          ref={videoRef}
-          key={selectedVideo.id}
-          source={videoSource || { uri: selectedVideo.video_url }}
-          style={styles.video}
-          videoStyle={styles.videoInner}
-          resizeMode={ResizeMode.CONTAIN}
-          useNativeControls={false}
-          shouldPlay={false}
-          positionMillis={resumePosition}
-          rate={playbackRate}
-          shouldCorrectPitch
-          progressUpdateIntervalMillis={500}
-          onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
-          onError={(e) => console.warn('Video playback error:', e)}
-        />
+        {videoSource ? (
+          <Video
+            ref={videoRef}
+            key={`${selectedVideo.id}_${typeof videoSource === 'object' && videoSource?.uri ? videoSource.uri : 'asset'}`}
+            source={videoSource}
+            style={styles.video}
+            videoStyle={styles.videoInner}
+            resizeMode={ResizeMode.CONTAIN}
+            useNativeControls={false}
+            shouldPlay={false}
+            positionMillis={resumePosition}
+            rate={playbackRate}
+            shouldCorrectPitch
+            progressUpdateIntervalMillis={500}
+            onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
+            onError={(e) => console.warn('Video playback error:', e)}
+          />
+        ) : (
+          <View style={[styles.video, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#000000' }]}>
+            <ActivityIndicator size="large" color={COLORS.primary} />
+          </View>
+        )}
 
         {/* Big Center Play Overlay when paused */}
         {!isPlaying && (
