@@ -1,5 +1,5 @@
 // src/screens/admin/ManageVideosScreen.tsx
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS } from '../../constants/colors';
 import { executeQuery } from '../../database/database';
+import { seedDatabase } from '../../database/seeders/seedDatabase';
 import { AdminStackParamList } from '../../navigation/AdminNavigator';
 import { Ionicons } from '@expo/vector-icons';
 import { confirmAction, showAlert } from '../../utils/confirmAction';
@@ -48,6 +49,9 @@ const ManageVideosScreen: React.FC<Props> = ({ navigation }) => {
   const [selectedClass, setSelectedClass] = useState<string>('all');
   const [selectedMedium, setSelectedMedium] = useState<string>('all');
   const [classes, setClasses] = useState<{ id: number; name: string }[]>([]);
+
+  const hasAutoSeeded = useRef(false);
+  const hasCheckedSeed = useRef(false);
 
   const loadVideos = async () => {
     try {
@@ -91,7 +95,20 @@ const ManageVideosScreen: React.FC<Props> = ({ navigation }) => {
       
       query += ' ORDER BY v.id DESC';
 
-      const items = await executeQuery(query, params);
+      let items = await executeQuery(query, params);
+
+      // If no videos found and not auto-seeded yet, trigger seedDatabase to populate newly added seeds
+      if (items.length === 0 && !hasAutoSeeded.current) {
+        hasAutoSeeded.current = true;
+        console.log('No videos found for query, ensuring database is seeded...');
+        try {
+          await seedDatabase();
+          items = await executeQuery(query, params);
+        } catch (seedErr) {
+          console.warn('Auto seed execution error:', seedErr);
+        }
+      }
+
       setVideos(items as VideoItem[]);
       setFilteredVideos(items as VideoItem[]);
     } catch (error) {
@@ -127,14 +144,31 @@ const ManageVideosScreen: React.FC<Props> = ({ navigation }) => {
 
   useFocusEffect(
     useCallback(() => {
-      loadVideos();
-      loadClasses();
+      const runInit = async () => {
+        if (!hasCheckedSeed.current) {
+          hasCheckedSeed.current = true;
+          try {
+            await seedDatabase();
+          } catch (e) {
+            console.warn('Initial seed error:', e);
+          }
+        }
+        await loadVideos();
+        await loadClasses();
+      };
+      runInit();
     }, [selectedClass, selectedMedium])
   );
 
-  const onRefresh = () => {
+  const onRefresh = async () => {
     setRefreshing(true);
-    loadVideos();
+    try {
+      await seedDatabase();
+    } catch (e) {
+      console.warn('Refresh seed error:', e);
+    }
+    await loadVideos();
+    setRefreshing(false);
   };
 
   const handleSearch = (text: string) => {
@@ -240,6 +274,24 @@ const ManageVideosScreen: React.FC<Props> = ({ navigation }) => {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Manage Videos</Text>
         <TouchableOpacity 
+          style={[styles.addButton, { marginRight: 8, backgroundColor: '#4F46E5' }]} 
+          onPress={async () => {
+            setRefreshing(true);
+            try {
+              await seedDatabase();
+              await loadVideos();
+              showAlert('Success', 'Videos synchronized successfully!');
+            } catch (err: any) {
+              showAlert('Error', `Sync failed: ${err?.message || err}`);
+            } finally {
+              setRefreshing(false);
+            }
+          }}
+          accessibilityLabel="Sync Videos"
+        >
+          <Ionicons name="sync" size={20} color={COLORS.white} />
+        </TouchableOpacity>
+        <TouchableOpacity 
           style={styles.addButton} 
           onPress={() => navigation.navigate('AddVideo')}
         >
@@ -288,13 +340,18 @@ const ManageVideosScreen: React.FC<Props> = ({ navigation }) => {
             <Ionicons name="videocam-outline" size={64} color="#CBD5E1" />
             <Text style={styles.emptyTitle}>No Videos Found</Text>
             <Text style={styles.emptyText}>
-              {searchQuery ? 'Try a different search' : 'Upload your first video'}
+              {searchQuery ? 'Try a different search' : 'Upload or sync videos'}
             </Text>
             <TouchableOpacity 
               style={styles.emptyButton}
-              onPress={() => navigation.navigate('AddVideo')}
+              onPress={async () => {
+                setRefreshing(true);
+                await seedDatabase();
+                await loadVideos();
+                setRefreshing(false);
+              }}
             >
-              <Text style={styles.emptyButtonText}>Upload Video</Text>
+              <Text style={styles.emptyButtonText}>Sync Videos</Text>
             </TouchableOpacity>
           </View>
         ) : (

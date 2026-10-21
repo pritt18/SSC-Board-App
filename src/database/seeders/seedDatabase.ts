@@ -693,45 +693,60 @@ export const seedDatabase = async () => {
       return '📚';
     };
 
+    // Preload classes and subjects for high-performance seeding
+    const classRows = await executeQuery('SELECT id, class_number FROM classes');
+    const classMap = new Map<number, number>();
+    for (const c of classRows) {
+      classMap.set(c.class_number, c.id);
+    }
+
+    const allSubjectRows = await executeQuery('SELECT id, class_id, name_english FROM subjects');
+    const subjectMap = new Map<string, number>();
+    for (const s of allSubjectRows) {
+      subjectMap.set(`${s.class_id}::${s.name_english.toLowerCase()}`, s.id);
+    }
+
+    // Preload existing PDFs
+    const existingPdfRows = await executeQuery('SELECT id, subject_id, title_english, pdf_url, medium FROM pdfs');
+    const pdfUrlMap = new Map<string, any>();
+    const pdfTitleMap = new Map<string, any>();
+    for (const p of existingPdfRows) {
+      if (p.pdf_url) pdfUrlMap.set(p.pdf_url, p);
+      if (p.title_english) pdfTitleMap.set(`${p.subject_id}::${p.title_english.toLowerCase()}`, p);
+    }
+
     for (const book of textbookPdfs) {
-      const classRows = await executeQuery(
-        `SELECT id FROM classes WHERE class_number = ? LIMIT 1`,
-        [book.classNumber]
-      );
-      if (!classRows || classRows.length === 0) continue;
-      const classId = classRows[0].id;
+      const classId = classMap.get(book.classNumber);
+      if (!classId) continue;
 
-      // Find or create subject for this class
-      let subjectRows = await executeQuery(
-        `SELECT id FROM subjects WHERE class_id = ? AND LOWER(name_english) = LOWER(?) LIMIT 1`,
-        [classId, book.subjectEnglish]
-      );
+      const subKey = `${classId}::${book.subjectEnglish.toLowerCase()}`;
+      let subjectId = subjectMap.get(subKey);
 
-      let subjectId: number;
-      if (!subjectRows || subjectRows.length === 0) {
+      if (!subjectId) {
         const icon = getSubjectIconForSeed(book.subjectEnglish);
         await executeQuery(
           `INSERT INTO subjects (class_id, name_english, name_marathi, icon, is_active)
            VALUES (?, ?, ?, ?, 1)`,
           [classId, book.subjectEnglish, book.subjectMarathi, icon]
         );
-        subjectRows = await executeQuery(
+        const newSub = await executeQuery(
           `SELECT id FROM subjects WHERE class_id = ? AND LOWER(name_english) = LOWER(?) LIMIT 1`,
           [classId, book.subjectEnglish]
         );
+        if (newSub && newSub.length > 0) {
+          subjectId = newSub[0].id as number;
+          subjectMap.set(subKey, subjectId);
+        }
       }
-      subjectId = subjectRows[0].id;
+      if (!subjectId) continue;
 
       const pdfUrl = book.driveId
         ? `https://drive.usercontent.google.com/download?id=${book.driveId}&export=download`
         : `file:///E:/SoftspireSolution/Document/ssc book content/${book.relativePath}`;
 
-      const existingPdf = await executeQuery(
-        `SELECT id FROM pdfs WHERE subject_id = ? AND (title_english = ? OR pdf_url = ?) LIMIT 1`,
-        [subjectId, book.titleEnglish, pdfUrl]
-      );
+      const existingPdf = pdfUrlMap.get(pdfUrl) || pdfTitleMap.get(`${subjectId}::${book.titleEnglish.toLowerCase()}`);
 
-      if (!existingPdf || existingPdf.length === 0) {
+      if (!existingPdf) {
         await executeQuery(
           `INSERT INTO pdfs (
             subject_id,
@@ -754,68 +769,58 @@ export const seedDatabase = async () => {
             book.medium,
           ]
         );
-      } else {
-        await executeQuery(
-          `UPDATE pdfs 
-           SET title_english = ?, title_marathi = ?, description_english = ?, description_marathi = ?, pdf_url = ?, medium = ?, is_active = 1
-           WHERE id = ?`,
-          [
-            book.titleEnglish,
-            book.titleMarathi,
-            book.descriptionEnglish,
-            book.descriptionMarathi,
-            pdfUrl,
-            book.medium,
-            existingPdf[0].id,
-          ]
-        );
+        pdfUrlMap.set(pdfUrl, { id: -1 });
+        pdfTitleMap.set(`${subjectId}::${book.titleEnglish.toLowerCase()}`, { id: -1 });
       }
     }
 
-    console.log(
-      'Maharashtra Board textbook PDFs seeded successfully',
-    );
+    console.log('Maharashtra Board textbook PDFs seeded successfully');
 
     // -----------------------------------------
     // 10. SEED MAHARASHTRA BOARD VIDEOS
     // -----------------------------------------
     console.log('Seeding Maharashtra Board textbook videos...');
 
+    // Preload existing videos for instant deduplication
+    const existingVideoRows = await executeQuery('SELECT id, subject_id, title_english, video_url, medium FROM videos');
+    const videoUrlMap = new Map<string, any>();
+    const videoTitleMap = new Map<string, any>();
+    for (const v of existingVideoRows) {
+      if (v.video_url) videoUrlMap.set(v.video_url, v);
+      if (v.title_english) videoTitleMap.set(`${v.subject_id}::${v.title_english.toLowerCase()}`, v);
+    }
+    console.log(`Preloaded ${existingVideoRows.length} existing videos in database.`);
+
+    let insertedVideosCount = 0;
     for (const vid of textbookVideos) {
-      const classRows = await executeQuery(
-        `SELECT id FROM classes WHERE class_number = ? LIMIT 1`,
-        [vid.classNumber]
-      );
-      if (!classRows || classRows.length === 0) continue;
-      const classId = classRows[0].id;
+      const classId = classMap.get(vid.classNumber);
+      if (!classId) continue;
 
-      // Find or create subject for this class
-      let subjectRows = await executeQuery(
-        `SELECT id FROM subjects WHERE class_id = ? AND LOWER(name_english) = LOWER(?) LIMIT 1`,
-        [classId, vid.subjectEnglish]
-      );
+      const subKey = `${classId}::${vid.subjectEnglish.toLowerCase()}`;
+      let subjectId = subjectMap.get(subKey);
 
-      let subjectId: number;
-      if (!subjectRows || subjectRows.length === 0) {
+      if (!subjectId) {
         const icon = getSubjectIconForSeed(vid.subjectEnglish);
         await executeQuery(
           `INSERT INTO subjects (class_id, name_english, name_marathi, icon, is_active)
            VALUES (?, ?, ?, ?, 1)`,
           [classId, vid.subjectEnglish, vid.subjectMarathi, icon]
         );
-        subjectRows = await executeQuery(
+        const newSub = await executeQuery(
           `SELECT id FROM subjects WHERE class_id = ? AND LOWER(name_english) = LOWER(?) LIMIT 1`,
           [classId, vid.subjectEnglish]
         );
+        if (newSub && newSub.length > 0) {
+          subjectId = newSub[0].id as number;
+          subjectMap.set(subKey, subjectId);
+        }
       }
-      subjectId = subjectRows[0].id;
+      if (!subjectId) continue;
 
-      const existingVideo = await executeQuery(
-        `SELECT id FROM videos WHERE subject_id = ? AND (title_english = ? OR video_url = ?) LIMIT 1`,
-        [subjectId, vid.titleEnglish, vid.videoUrl]
-      );
+      const existingVideo = (vid.videoUrl ? videoUrlMap.get(vid.videoUrl) : null) ||
+        videoTitleMap.get(`${subjectId}::${vid.titleEnglish.toLowerCase()}`);
 
-      if (!existingVideo || existingVideo.length === 0) {
+      if (!existingVideo) {
         await executeQuery(
           `INSERT INTO videos (
             subject_id,
@@ -839,28 +844,18 @@ export const seedDatabase = async () => {
             vid.sortOrder,
           ]
         );
-      } else {
+        videoUrlMap.set(vid.videoUrl, { id: -1 });
+        videoTitleMap.set(`${subjectId}::${vid.titleEnglish.toLowerCase()}`, { id: -1 });
+        insertedVideosCount++;
+      } else if (existingVideo.medium !== vid.medium && existingVideo.id > 0) {
         await executeQuery(
-          `UPDATE videos
-           SET title_english = ?, title_marathi = ?, description_english = ?, description_marathi = ?, video_url = ?, medium = ?, sort_order = ?, is_active = 1
-           WHERE id = ?`,
-          [
-            vid.titleEnglish,
-            vid.titleMarathi,
-            vid.descriptionEnglish,
-            vid.descriptionMarathi,
-            vid.videoUrl,
-            vid.medium,
-            vid.sortOrder,
-            existingVideo[0].id,
-          ]
+          `UPDATE videos SET medium = ? WHERE id = ?`,
+          [vid.medium, existingVideo.id]
         );
       }
     }
 
-    console.log(
-      'Maharashtra Board textbook videos seeded successfully',
-    );
+    console.log(`Maharashtra Board textbook videos seeded successfully (inserted ${insertedVideosCount} new videos)`);
 
     console.log(
       'Database seeded successfully',
