@@ -274,24 +274,6 @@ const ManageVideosScreen: React.FC<Props> = ({ navigation }) => {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Manage Videos</Text>
         <TouchableOpacity 
-          style={[styles.addButton, { marginRight: 8, backgroundColor: '#4F46E5' }]} 
-          onPress={async () => {
-            setRefreshing(true);
-            try {
-              await seedDatabase();
-              await loadVideos();
-              showAlert('Success', 'Videos synchronized successfully!');
-            } catch (err: any) {
-              showAlert('Error', `Sync failed: ${err?.message || err}`);
-            } finally {
-              setRefreshing(false);
-            }
-          }}
-          accessibilityLabel="Sync Videos"
-        >
-          <Ionicons name="sync" size={20} color={COLORS.white} />
-        </TouchableOpacity>
-        <TouchableOpacity 
           style={styles.addButton} 
           onPress={() => navigation.navigate('AddVideo')}
         >
@@ -340,18 +322,13 @@ const ManageVideosScreen: React.FC<Props> = ({ navigation }) => {
             <Ionicons name="videocam-outline" size={64} color="#CBD5E1" />
             <Text style={styles.emptyTitle}>No Videos Found</Text>
             <Text style={styles.emptyText}>
-              {searchQuery ? 'Try a different search' : 'Upload or sync videos'}
+              {searchQuery ? 'Try a different search' : 'Upload your first video'}
             </Text>
             <TouchableOpacity 
               style={styles.emptyButton}
-              onPress={async () => {
-                setRefreshing(true);
-                await seedDatabase();
-                await loadVideos();
-                setRefreshing(false);
-              }}
+              onPress={() => navigation.navigate('AddVideo')}
             >
-              <Text style={styles.emptyButtonText}>Sync Videos</Text>
+              <Text style={styles.emptyButtonText}>Upload Video</Text>
             </TouchableOpacity>
           </View>
         ) : (
