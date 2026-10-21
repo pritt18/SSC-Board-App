@@ -149,8 +149,8 @@ export const seedDatabase = async () => {
       );
     }
 
-    // Seed active licenses for Class 1 to 6 for the student
-    for (let c = 1; c <= 6; c++) {
+    // Seed active licenses for Class 1 to 7 for the student
+    for (let c = 1; c <= 7; c++) {
       const licenseKey = `DEMO-CLAS-000${c}-PASS`;
       const existingLicense = await executeQuery(
         `SELECT id FROM licenses WHERE user_id = ? AND class_id = ? LIMIT 1`,
