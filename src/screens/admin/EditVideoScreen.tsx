@@ -45,6 +45,7 @@ const EditVideoScreen: React.FC<Props> = ({ navigation, route }) => {
     descriptionMarathi: '',
     subjectId: '',
     chapterId: '',
+    medium: 'both' as 'english' | 'marathi' | 'both',
     sortOrder: '1',
   });
 
@@ -79,6 +80,7 @@ const EditVideoScreen: React.FC<Props> = ({ navigation, route }) => {
           description_marathi,
           subject_id,
           chapter_id,
+          medium,
           sort_order
         FROM videos 
         WHERE id = ?`,
@@ -94,6 +96,7 @@ const EditVideoScreen: React.FC<Props> = ({ navigation, route }) => {
           descriptionMarathi: video.description_marathi || '',
           subjectId: String(video.subject_id || ''),
           chapterId: String(video.chapter_id || ''),
+          medium: (video.medium || 'both') as 'english' | 'marathi' | 'both',
           sortOrder: String(video.sort_order || 1),
         });
       } else {
@@ -173,6 +176,7 @@ const EditVideoScreen: React.FC<Props> = ({ navigation, route }) => {
           description_marathi = ?,
           subject_id = ?,
           chapter_id = ?,
+          medium = ?,
           sort_order = ?
         WHERE id = ?`,
         [
@@ -182,6 +186,7 @@ const EditVideoScreen: React.FC<Props> = ({ navigation, route }) => {
           formData.descriptionMarathi || '',
           parseInt(formData.subjectId),
           formData.chapterId ? parseInt(formData.chapterId) : null,
+          formData.medium || 'both',
           parseInt(formData.sortOrder) || 1,
           videoId
         ]
@@ -272,6 +277,37 @@ const EditVideoScreen: React.FC<Props> = ({ navigation, route }) => {
               numberOfLines={3}
               textAlignVertical="top"
             />
+          </View>
+
+          
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Medium *</Text>
+            <View style={styles.mediumRow}>
+              {[
+                { key: 'marathi', label: 'Marathi' },
+                { key: 'english', label: 'English' },
+                { key: 'both', label: 'Both' },
+              ].map((m) => (
+                <TouchableOpacity
+                  key={m.key}
+                  style={[
+                    styles.mediumChip,
+                    formData.medium === m.key && styles.mediumChipSelected,
+                  ]}
+                  onPress={() => setFormData({ ...formData, medium: m.key as any })}
+                  activeOpacity={0.7}
+                >
+                  <Text
+                    style={[
+                      styles.mediumChipText,
+                      formData.medium === m.key && styles.mediumChipTextSelected,
+                    ]}
+                  >
+                    {m.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
 
           <View style={styles.inputGroup}>
@@ -376,6 +412,36 @@ const EditVideoScreen: React.FC<Props> = ({ navigation, route }) => {
 };
 
 const styles = StyleSheet.create({
+
+  mediumRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 6,
+  },
+  mediumChip: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mediumChipSelected: {
+    borderColor: COLORS.primary,
+    backgroundColor: '#EFF6FF',
+  },
+  mediumChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  mediumChipTextSelected: {
+    color: COLORS.primary,
+    fontWeight: '700',
+  },
+
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',

@@ -31,6 +31,7 @@ interface VideoItem {
   subject_id: number;
   classNumber: number;
   className: string;
+  medium: string;
   isActive: boolean;
   created_at: string;
   video_url: string;
@@ -45,6 +46,7 @@ const ManageVideosScreen: React.FC<Props> = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [selectedClass, setSelectedClass] = useState<string>('all');
+  const [selectedMedium, setSelectedMedium] = useState<string>('all');
   const [classes, setClasses] = useState<{ id: number; name: string }[]>([]);
 
   const loadVideos = async () => {
@@ -60,6 +62,7 @@ const ManageVideosScreen: React.FC<Props> = ({ navigation }) => {
           v.subject_id,
           c.class_number as classNumber,
           c.name_english as className,
+          v.medium,
           v.is_active as isActive,
           v.created_at,
           v.video_url,
@@ -70,10 +73,20 @@ const ManageVideosScreen: React.FC<Props> = ({ navigation }) => {
       `;
       
       const params: any[] = [];
-      
+      const conditions: string[] = [];
+
       if (selectedClass !== 'all') {
-        query += ' WHERE c.id = ?';
+        conditions.push('c.id = ?');
         params.push(parseInt(selectedClass));
+      }
+
+      if (selectedMedium !== 'all') {
+        conditions.push("(v.medium = ? OR v.medium = 'both' OR v.medium IS NULL)");
+        params.push(selectedMedium);
+      }
+
+      if (conditions.length > 0) {
+        query += ' WHERE ' + conditions.join(' AND ');
       }
       
       query += ' ORDER BY v.id DESC';
@@ -86,6 +99,7 @@ const ManageVideosScreen: React.FC<Props> = ({ navigation }) => {
       console.error('Error loading videos:', {
         error: errorMessage,
         selectedClass,
+        selectedMedium,
         platform: typeof window !== 'undefined' ? 'web' : 'native'
       });
       showAlert('Error', `Failed to load videos: ${errorMessage}`);
@@ -115,7 +129,7 @@ const ManageVideosScreen: React.FC<Props> = ({ navigation }) => {
     useCallback(() => {
       loadVideos();
       loadClasses();
-    }, [selectedClass])
+    }, [selectedClass, selectedMedium])
   );
 
   const onRefresh = () => {
@@ -128,10 +142,14 @@ const ManageVideosScreen: React.FC<Props> = ({ navigation }) => {
     if (text.trim() === '') {
       setFilteredVideos(videos);
     } else {
+      const q = text.toLowerCase();
       const filtered = videos.filter(
         (video) =>
-          video.title.toLowerCase().includes(text.toLowerCase()) ||
-          video.subject.toLowerCase().includes(text.toLowerCase())
+          video.title.toLowerCase().includes(q) ||
+          (video.title_marathi && video.title_marathi.toLowerCase().includes(q)) ||
+          video.subject.toLowerCase().includes(q) ||
+          video.className.toLowerCase().includes(q) ||
+          (video.medium && video.medium.toLowerCase().includes(q))
       );
       setFilteredVideos(filtered);
     }
@@ -251,7 +269,7 @@ const ManageVideosScreen: React.FC<Props> = ({ navigation }) => {
           onPress={() => setShowFilterModal(true)}
         >
           <Ionicons name="filter" size={20} color={COLORS.primary} />
-          {selectedClass !== 'all' && (
+          {(selectedClass !== 'all' || selectedMedium !== 'all') && (
             <View style={styles.filterBadge} />
           )}
         </TouchableOpacity>
@@ -288,7 +306,29 @@ const ManageVideosScreen: React.FC<Props> = ({ navigation }) => {
                     {video.isActive ? 'Active' : 'Inactive'}
                   </Text>
                 </View>
-                <Text style={styles.classText}>{video.className}</Text>
+                <View style={styles.headerRightBadges}>
+                  <Text style={styles.classText}>
+                    Class {video.classNumber != null ? video.classNumber : (video.className || '?')}
+                  </Text>
+                  <View
+                    style={[
+                      styles.mediumBadge,
+                      video.medium === 'marathi'
+                        ? styles.mediumBadgeMarathi
+                        : video.medium === 'english'
+                        ? styles.mediumBadgeEnglish
+                        : styles.mediumBadgeBoth,
+                    ]}
+                  >
+                    <Text style={styles.mediumBadgeText}>
+                      {video.medium === 'marathi'
+                        ? 'Marathi'
+                        : video.medium === 'english'
+                        ? 'English'
+                        : 'Both'}
+                    </Text>
+                  </View>
+                </View>
               </View>
 
               <View style={styles.cardBody}>
@@ -360,32 +400,58 @@ const ManageVideosScreen: React.FC<Props> = ({ navigation }) => {
           onPress={() => setShowFilterModal(false)}
         >
           <View style={styles.filterModalContent}>
-            <Text style={styles.filterModalTitle}>Filter by Class</Text>
-            <TouchableOpacity
-              style={[styles.filterOption, selectedClass === 'all' && styles.filterOptionSelected]}
-              onPress={() => {
-                setSelectedClass('all');
-                setShowFilterModal(false);
-              }}
-            >
-              <Text style={[styles.filterOptionText, selectedClass === 'all' && styles.filterOptionTextSelected]}>
-                All Classes
-              </Text>
-            </TouchableOpacity>
-            {classes.map((cls) => (
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 10 }}>
+              <Text style={styles.filterModalTitle}>Filter by Class</Text>
               <TouchableOpacity
-                key={cls.id}
-                style={[styles.filterOption, selectedClass === String(cls.id) && styles.filterOptionSelected]}
+                style={[styles.filterOption, selectedClass === 'all' && styles.filterOptionSelected]}
                 onPress={() => {
-                  setSelectedClass(String(cls.id));
-                  setShowFilterModal(false);
+                  setSelectedClass('all');
                 }}
               >
-                <Text style={[styles.filterOptionText, selectedClass === String(cls.id) && styles.filterOptionTextSelected]}>
-                  {cls.name}
+                <Text style={[styles.filterOptionText, selectedClass === 'all' && styles.filterOptionTextSelected]}>
+                  All Classes
                 </Text>
               </TouchableOpacity>
-            ))}
+              {classes.map((cls) => (
+                <TouchableOpacity
+                  key={cls.id}
+                  style={[styles.filterOption, selectedClass === String(cls.id) && styles.filterOptionSelected]}
+                  onPress={() => {
+                    setSelectedClass(String(cls.id));
+                  }}
+                >
+                  <Text style={[styles.filterOptionText, selectedClass === String(cls.id) && styles.filterOptionTextSelected]}>
+                    {cls.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+
+              <Text style={[styles.filterModalTitle, { marginTop: 16 }]}>Filter by Medium</Text>
+              {[
+                { key: 'all', label: 'All Mediums' },
+                { key: 'english', label: 'English Medium' },
+                { key: 'marathi', label: 'Marathi Medium' },
+              ].map((m) => (
+                <TouchableOpacity
+                  key={m.key}
+                  style={[styles.filterOption, selectedMedium === m.key && styles.filterOptionSelected]}
+                  onPress={() => {
+                    setSelectedMedium(m.key);
+                  }}
+                >
+                  <Text style={[styles.filterOptionText, selectedMedium === m.key && styles.filterOptionTextSelected]}>
+                    {m.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <TouchableOpacity
+              style={styles.filterApplyButton}
+              onPress={() => setShowFilterModal(false)}
+            >
+              <Text style={styles.filterApplyButtonText}>Apply</Text>
+            </TouchableOpacity>
           </View>
         </TouchableOpacity>
       </Modal>
@@ -549,6 +615,30 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#64748B',
   },
+  headerRightBadges: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  mediumBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  mediumBadgeEnglish: {
+    backgroundColor: '#DBEAFE',
+  },
+  mediumBadgeMarathi: {
+    backgroundColor: '#FEF3C7',
+  },
+  mediumBadgeBoth: {
+    backgroundColor: '#E2E8F0',
+  },
+  mediumBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#334155',
+  },
   cardBody: {
     flexDirection: 'row',
     padding: 14,
@@ -610,7 +700,6 @@ const styles = StyleSheet.create({
   editButton: {
     backgroundColor: '#EEF2FF',
   },
-
   editButtonText: {
     fontSize: 12,
     color: '#2563EB',
@@ -642,6 +731,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     width: '80%',
+    maxHeight: '80%',
   },
   filterModalTitle: {
     fontSize: 16,
@@ -664,6 +754,18 @@ const styles = StyleSheet.create({
   filterOptionTextSelected: {
     color: COLORS.primary,
     fontWeight: '600',
+  },
+  filterApplyButton: {
+    marginTop: 16,
+    backgroundColor: COLORS.primary,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  filterApplyButtonText: {
+    color: COLORS.white,
+    fontWeight: '700',
+    fontSize: 14,
   },
 });
 
