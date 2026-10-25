@@ -682,6 +682,7 @@ export const seedDatabase = async () => {
       if (n.includes('mar')) return '📖';
       if (n.includes('hin')) return '📕';
       if (n.includes('hist')) return '🏛️';
+      if (n.includes('civic') || n.includes('pol')) return '🏛️';
       if (n.includes('geo')) return '🌍';
       if (n.includes('san')) return '🕉️';
       if (n.includes('def') || n.includes('force')) return '🛡️';
