@@ -687,6 +687,8 @@ export const seedDatabase = async () => {
       if (n.includes('san')) return '🕉️';
       if (n.includes('def') || n.includes('force')) return '🛡️';
       if (n.includes('water')) return '💧';
+      if (n.includes('fren') || n.includes('germ') || n.includes('urdu')) return '🌐';
+      if (n.includes('vocat')) return '🔧';
       if (n.includes('art') || n.includes('kala') || n.includes('music')) return '🎨';
       if (n.includes('phys')) return '⚽';
       if (n.includes('work') || n.includes('play')) return '🛠️';
@@ -713,7 +715,7 @@ export const seedDatabase = async () => {
     const pdfTitleMap = new Map<string, any>();
     for (const p of existingPdfRows) {
       if (p.pdf_url) pdfUrlMap.set(p.pdf_url, p);
-      if (p.title_english) pdfTitleMap.set(`${p.subject_id}::${p.title_english.toLowerCase()}`, p);
+      if (p.title_english) pdfTitleMap.set(`${p.subject_id}::${p.medium || ''}::${p.title_english.toLowerCase()}`, p);
     }
 
     for (const book of textbookPdfs) {
@@ -745,7 +747,7 @@ export const seedDatabase = async () => {
         ? `https://drive.usercontent.google.com/download?id=${book.driveId}&export=download`
         : `file:///E:/SoftspireSolution/Document/ssc book content/${book.relativePath}`;
 
-      const existingPdf = pdfUrlMap.get(pdfUrl) || pdfTitleMap.get(`${subjectId}::${book.titleEnglish.toLowerCase()}`);
+      const existingPdf = pdfUrlMap.get(pdfUrl) || pdfTitleMap.get(`${subjectId}::${book.medium}::${book.titleEnglish.toLowerCase()}`);
 
       if (!existingPdf) {
         await executeQuery(
@@ -771,7 +773,7 @@ export const seedDatabase = async () => {
           ]
         );
         pdfUrlMap.set(pdfUrl, { id: -1 });
-        pdfTitleMap.set(`${subjectId}::${book.titleEnglish.toLowerCase()}`, { id: -1 });
+        pdfTitleMap.set(`${subjectId}::${book.medium}::${book.titleEnglish.toLowerCase()}`, { id: -1 });
       }
     }
 

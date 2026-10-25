@@ -1,5 +1,5 @@
 // src/screens/admin/ManagePdfsScreen.tsx
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS } from '../../constants/colors';
 import { executeQuery } from '../../database/database';
+import { seedDatabase } from '../../database/seeders/seedDatabase';
 import { AdminStackParamList } from '../../navigation/AdminNavigator';
 import { Ionicons } from '@expo/vector-icons';
 import { confirmAction, showAlert } from '../../utils/confirmAction';
@@ -51,6 +52,7 @@ const ManagePdfsScreen: React.FC<Props> = ({ navigation }) => {
   const [selectedClass, setSelectedClass] = useState<string>('all');
   const [selectedMedium, setSelectedMedium] = useState<string>('all');
   const [classes, setClasses] = useState<{ id: number; name: string }[]>([]);
+  const hasCheckedSeed = useRef(false);
 
   const loadPdfs = async () => {
     try {
@@ -133,14 +135,31 @@ const ManagePdfsScreen: React.FC<Props> = ({ navigation }) => {
 
   useFocusEffect(
     useCallback(() => {
-      loadPdfs();
-      loadClasses();
+      const runInit = async () => {
+        if (!hasCheckedSeed.current) {
+          hasCheckedSeed.current = true;
+          try {
+            await seedDatabase();
+          } catch (e) {
+            console.warn('Initial seed error:', e);
+          }
+        }
+        await loadPdfs();
+        await loadClasses();
+      };
+      runInit();
     }, [selectedClass, selectedMedium])
   );
 
-  const onRefresh = () => {
+  const onRefresh = async () => {
     setRefreshing(true);
-    loadPdfs();
+    try {
+      await seedDatabase();
+    } catch (e) {
+      console.warn('Refresh seed error:', e);
+    }
+    await loadPdfs();
+    setRefreshing(false);
   };
 
   const handleSearch = (text: string) => {
