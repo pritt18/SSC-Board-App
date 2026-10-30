@@ -790,7 +790,7 @@ export const seedDatabase = async () => {
     const videoTitleMap = new Map<string, any>();
     for (const v of existingVideoRows) {
       if (v.video_url) videoUrlMap.set(v.video_url, v);
-      if (v.title_english) videoTitleMap.set(`${v.subject_id}::${v.title_english.toLowerCase()}`, v);
+      if (v.title_english) videoTitleMap.set(`${v.subject_id}::${v.medium || ''}::${v.title_english.toLowerCase()}`, v);
     }
     console.log(`Preloaded ${existingVideoRows.length} existing videos in database.`);
 
@@ -821,7 +821,7 @@ export const seedDatabase = async () => {
       if (!subjectId) continue;
 
       const existingVideo = (vid.videoUrl ? videoUrlMap.get(vid.videoUrl) : null) ||
-        videoTitleMap.get(`${subjectId}::${vid.titleEnglish.toLowerCase()}`);
+        videoTitleMap.get(`${subjectId}::${vid.medium}::${vid.titleEnglish.toLowerCase()}`);
 
       if (!existingVideo) {
         await executeQuery(
@@ -848,7 +848,7 @@ export const seedDatabase = async () => {
           ]
         );
         videoUrlMap.set(vid.videoUrl, { id: -1 });
-        videoTitleMap.set(`${subjectId}::${vid.titleEnglish.toLowerCase()}`, { id: -1 });
+        videoTitleMap.set(`${subjectId}::${vid.medium}::${vid.titleEnglish.toLowerCase()}`, { id: -1 });
         insertedVideosCount++;
       } else if (existingVideo.medium !== vid.medium && existingVideo.id > 0) {
         await executeQuery(
