@@ -10,6 +10,7 @@ import CornerLogo from './src/components/common/CornerLogo';
 import SplashScreen from './src/screens/splash/SplashScreen';
 import { initializeDatabase } from './src/database/database';
 import { seedDatabase } from './src/database/seeders/seedDatabase';
+import { secureContentManager } from './src/utils/secureContentManager';
 import { LogBox, View, Text, ActivityIndicator, StyleSheet, Platform } from 'react-native';
 
 // Ignore specific warnings
@@ -82,6 +83,11 @@ export default function App() {
         console.log('Seeding database...');
         await seedDatabase();
         console.log('✅ Database initialized successfully');
+
+        // Initialize DRM offline stream server
+        secureContentManager.initialize().catch((err) => {
+          console.warn('[App] DRM server background init error:', err);
+        });
       } catch (error) {
         console.error('❌ Database initialization failed:', error);
         setDbError(

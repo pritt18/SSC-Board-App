@@ -1,7 +1,7 @@
 import * as Crypto from 'expo-crypto';
 import { executeQuery } from '../database/database';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-// Remove expo-device import - use AsyncStorage instead
+import { secureContentManager } from '../utils/secureContentManager';
 
 export interface License {
   id?: number;
@@ -15,13 +15,17 @@ export interface License {
 }
 
 export class LicenseService {
-  // Generate unique device ID
+  // Generate hardware-bound unique device ID for client licensing
   static getDeviceId = async (): Promise<string> => {
     try {
       let deviceId = await AsyncStorage.getItem('device_id');
       if (!deviceId) {
-        deviceId = Math.random().toString(36).substring(2, 15) + 
-                   Math.random().toString(36).substring(2, 15);
+        // Attempt to fetch hardware fingerprint
+        deviceId = await secureContentManager.getDeviceFingerprint();
+        if (!deviceId || deviceId === 'default-device-fp') {
+          deviceId = Math.random().toString(36).substring(2, 15) + 
+                     Math.random().toString(36).substring(2, 15);
+        }
         await AsyncStorage.setItem('device_id', deviceId);
       }
       return deviceId;

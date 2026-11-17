@@ -1,0 +1,22 @@
+{
+  "clientId": "ssc_softspire_default",
+  "clientName": "SSC Board Learning App",
+  "clientSecret": "Sec4$9Xk8#mQ2!vL7pW9@zR1",
+  "masterSecret": "SSC_MASTER_DRM_PROTECTION_KEY_2026",
+  "offlineSubdir": "offline_content",
+  "watermarkText": "SSC BOARD - SOFTSPIRE",
+  "allowedClasses": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10
+  ],
+  "allowOnlineFallback": true,
+  "version": "1.0.0"
+}

@@ -33,6 +33,7 @@ import { videoAssets } from '../../../data/videoAssets';
 import { subtitleAssets } from '../../../data/subtitleAssets';
 import { parseSrt, SubtitleCue } from '../../../utils/subtitleParser';
 import { resolveFileUri } from '../../../utils/fileStorage';
+import { secureContentManager } from '../../../utils/secureContentManager';
 
 
 type Props = NativeStackScreenProps<any, 'VideoPlayer'>;
@@ -303,6 +304,18 @@ const VideoPlayerScreen: React.FC<Props> = ({ navigation, route }) => {
       if (!url) {
         if (isMounted) setVideoSource(null);
         return;
+      }
+
+      // 0. Check Offline Encrypted Content Store (.mp4.enc)
+      try {
+        const offlineStream = await secureContentManager.resolveOfflineVideo(url, selectedVideo.id);
+        if (offlineStream && isMounted) {
+          console.log('[VideoPlayerScreen] Playing encrypted offline stream:', offlineStream);
+          setVideoSource({ uri: offlineStream });
+          return;
+        }
+      } catch (offlineErr) {
+        console.warn('[VideoPlayerScreen] Offline content check error:', offlineErr);
       }
 
       // 1. Check bundled asset dictionary or sample-video.mp4

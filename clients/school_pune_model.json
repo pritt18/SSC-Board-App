@@ -1,0 +1,15 @@
+{
+  "clientId": "school_pune_model_001",
+  "clientName": "Pune Model School - SSC App",
+  "clientSecret": "Pune#Mod92$7LqX@2026!Key",
+  "masterSecret": "SSC_MASTER_DRM_PROTECTION_KEY_2026",
+  "offlineSubdir": "offline_content",
+  "watermarkText": "LICENSED TO: PUNE MODEL SCHOOL",
+  "allowedClasses": [
+    8,
+    9,
+    10
+  ],
+  "allowOnlineFallback": false,
+  "version": "1.0.0"
+}

@@ -14,6 +14,8 @@ import { resolvePdfSource } from '../../utils/pdfResolver';
 import { useAuth } from '../../context/AuthContext';
 import { executeQuery } from '../../database/database';
 import { recordPdfProgress } from '../../services/progressService';
+import { secureContentManager } from '../../utils/secureContentManager';
+import { CURRENT_CLIENT_CONFIG } from '../../config/clientConfig';
 
 type Props = NativeStackScreenProps<LearningStackParamList, 'PdfDisplay'>;
 
@@ -1047,6 +1049,19 @@ const PdfDisplayScreen: React.FC<Props> = ({ route, navigation }) => {
           await FileSystem.makeDirectoryAsync(cacheDir, { intermediates: true });
         }
 
+        // 3. Check offline encrypted DRM storage (.pdf.enc)
+        try {
+          const offlineStream = await secureContentManager.resolveOfflinePdf(pdfUrl, route.params?.pdfId);
+          if (offlineStream && isMounted) {
+            console.log('[PdfDisplayScreen] Found encrypted offline PDF stream:', offlineStream);
+            setLocalPdfUri(offlineStream);
+            setViewerReady(true);
+            return;
+          }
+        } catch (offlineErr) {
+          console.warn('[PdfDisplayScreen] Offline PDF check error:', offlineErr);
+        }
+
         const safeFileName = resolved?.cacheFileName || (title ? title.replace(/[^a-zA-Z0-9_-]/g, '_') + '.pdf' : 'book.pdf');
         const localTargetUri = cacheDir + safeFileName;
 
@@ -1112,7 +1127,7 @@ const PdfDisplayScreen: React.FC<Props> = ({ route, navigation }) => {
     window.__PDF_FULL_URI__ = ${JSON.stringify(localPdfUri || '')};
     window.__PDF_CLOUD_URL__ = ${JSON.stringify(cloudPdfUrl || '')};
     window.__PDF_FILE_URI__ = ${JSON.stringify(pdfUrl || '')};
-    window.__USER_WATERMARK__ = 'SSC BOARD';
+    window.__USER_WATERMARK__ = ${JSON.stringify(CURRENT_CLIENT_CONFIG.watermarkText || 'SSC BOARD')};
     true;
   `;
 
