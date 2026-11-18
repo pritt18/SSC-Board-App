@@ -23,6 +23,7 @@ class SecureContentManager {
   private isInitializing: boolean = false;
   private config: ClientConfig = CURRENT_CLIENT_CONFIG;
   private knownFilesCache: Set<string> = new Set();
+  private cachedFilesList: OfflineFileInfo[] = [];
   private lastCacheRefresh: number = 0;
 
   /**
@@ -83,6 +84,7 @@ class SecureContentManager {
     try {
       const files: OfflineFileInfo[] = await SecureContentModule.listOfflineFiles('');
       this.knownFilesCache.clear();
+      this.cachedFilesList = files || [];
       for (const f of files) {
         this.knownFilesCache.add(f.path.toLowerCase());
         this.knownFilesCache.add(f.name.toLowerCase());
@@ -93,6 +95,99 @@ class SecureContentManager {
       console.warn('[SecureContentManager] Error listing offline files:', e);
       return [];
     }
+  }
+
+  /**
+   * Get cached offline files list with details (name, path, size).
+   */
+  getCachedFilesList(): OfflineFileInfo[] {
+    return this.cachedFilesList;
+  }
+
+  /**
+   * Fast synchronous check if video exists offline in cache.
+   */
+  isOfflineVideoCached(videoUrl: string, videoId?: number): boolean {
+    if (this.knownFilesCache.size === 0) return false;
+    const candidates = this.generateCandidates(videoUrl, videoId, 'mp4');
+    return candidates.some((cand) => {
+      const low = cand.toLowerCase();
+      const base = low.split('/').pop() || low;
+      return this.knownFilesCache.has(low) || this.knownFilesCache.has(base);
+    });
+  }
+
+  /**
+   * Fast synchronous check if PDF exists offline in cache.
+   */
+  isOfflinePdfCached(pdfUrl: string, pdfId?: number): boolean {
+    if (this.knownFilesCache.size === 0) return false;
+    const candidates = this.generateCandidates(pdfUrl, pdfId, 'pdf');
+    return candidates.some((cand) => {
+      const low = cand.toLowerCase();
+      const base = low.split('/').pop() || low;
+      return this.knownFilesCache.has(low) || this.knownFilesCache.has(base);
+    });
+  }
+
+  /**
+   * Copy text safely to system clipboard across Android and Web.
+   */
+  async copyToClipboard(text: string): Promise<boolean> {
+    if (Platform.OS === 'android' && SecureContentModule?.copyToClipboard) {
+      try {
+        return await SecureContentModule.copyToClipboard(text);
+      } catch (e) {
+        console.warn('Native copyToClipboard failed:', e);
+      }
+    }
+
+    if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch (e) {
+        console.warn('Navigator clipboard failed:', e);
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Get detailed status of offline DRM engine and storage.
+   */
+  async getOfflineStats() {
+    const deviceId = await this.getDeviceFingerprint();
+    const contentDir = await this.getContentDirectory();
+    
+    let videoCount = 0;
+    let pdfCount = 0;
+
+    for (const f of this.cachedFilesList) {
+      const low = f.name.toLowerCase();
+      if (low.endsWith('.mp4.enc') || low.includes('video')) {
+        videoCount++;
+      } else if (low.endsWith('.pdf.enc') || low.includes('pdf') || low.includes('book')) {
+        pdfCount++;
+      }
+    }
+
+    return {
+      serverRunning: Boolean(this.serverInfo),
+      port: this.serverInfo?.port || 0,
+      host: this.serverInfo?.host || '127.0.0.1',
+      sessionToken: this.serverInfo?.sessionToken || '',
+      contentDir,
+      totalFiles: this.cachedFilesList.length,
+      videoCount,
+      pdfCount,
+      deviceId,
+      clientName: this.config.clientName,
+      clientId: this.config.clientId,
+      watermarkText: this.config.watermarkText,
+      version: this.config.version,
+    };
   }
 
   /**

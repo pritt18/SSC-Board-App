@@ -15,6 +15,7 @@ import { COLORS } from '../../constants/colors';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { executeQuery } from '../../database/database';
+import { secureContentManager } from '../../utils/secureContentManager';
 
 import {
   LearningStackParamList,
@@ -32,13 +33,22 @@ const LearningContentScreen: React.FC<Props> = ({
   const { subjectId } = route.params;
   const { user } = useAuth();
   const [subjectProgress, setSubjectProgress] = useState(0);
+  const [hasOfflineVideos, setHasOfflineVideos] = useState(false);
+  const [hasOfflinePdfs, setHasOfflinePdfs] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
       let isMounted = true;
-      const loadSubjectProgress = async () => {
+      const loadData = async () => {
         if (!user?.id || !subjectId) return;
         try {
+          // Check offline content status
+          const stats = await secureContentManager.getOfflineStats();
+          if (isMounted) {
+            setHasOfflineVideos(stats.videoCount > 0);
+            setHasOfflinePdfs(stats.pdfCount > 0);
+          }
+
           const rows = await executeQuery(
             `SELECT video_watched, pdf_viewed, quiz_completed FROM progress 
              WHERE user_id = ? AND subject_id = ? LIMIT 1`,
@@ -54,10 +64,10 @@ const LearningContentScreen: React.FC<Props> = ({
             setSubjectProgress(0);
           }
         } catch (e) {
-          console.error('Error loading subject progress:', e);
+          console.error('Error loading subject data:', e);
         }
       };
-      loadSubjectProgress();
+      loadData();
       return () => {
         isMounted = false;
       };
@@ -302,9 +312,17 @@ const LearningContentScreen: React.FC<Props> = ({
                 </Text>
               </View>
 
-              <Text style={styles.optionTitle}>
-                {item.title}
-              </Text>
+              <View style={styles.cardTitleRow}>
+                <Text style={styles.optionTitle}>
+                  {item.title}
+                </Text>
+                {((item.id === 1 && hasOfflineVideos) || (item.id === 2 && hasOfflinePdfs)) && (
+                  <View style={styles.cardOfflineBadge}>
+                    <Ionicons name="flash" size={10} color="#059669" style={{ marginRight: 2 }} />
+                    <Text style={styles.cardOfflineBadgeText}>Offline</Text>
+                  </View>
+                )}
+              </View>
 
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginTop: 4 }}>
                 <Text style={[styles.optionSubtitle, { flex: 1 }]}>
@@ -465,7 +483,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: COLORS.textPrimary,
+  },
+
+  cardTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
     marginTop: 14,
+  },
+
+  cardOfflineBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+
+  cardOfflineBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#059669',
   },
 
   optionSubtitle: {

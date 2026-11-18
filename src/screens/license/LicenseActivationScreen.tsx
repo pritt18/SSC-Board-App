@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   SafeAreaView,
   StyleSheet,
@@ -6,10 +6,14 @@ import {
   View,
   Alert,
   TouchableOpacity,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { LicenseService } from '../../services/licenseService';
+import { secureContentManager } from '../../utils/secureContentManager';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import { COLORS } from '../../constants/colors';
@@ -28,10 +32,39 @@ const LicenseActivationScreen: React.FC<Props> = ({
   route,
 }) => {
   const [licenseKey, setLicenseKey] = useState('');
+  const [deviceId, setDeviceId] = useState('');
+  const [copied, setCopied] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
 
-  const classId = propClassId || route?.params?.classId || user?.class_id || 1;
+  const classId = propClassId || route?.params?.classId || user?.class_id || 10;
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchDeviceId = async () => {
+      try {
+        const id = await LicenseService.getDeviceId();
+        if (isMounted) setDeviceId(id);
+      } catch (e) {
+        console.warn('Error loading device ID:', e);
+      }
+    };
+    fetchDeviceId();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const handleCopyDeviceId = async () => {
+    if (!deviceId) return;
+    const success = await secureContentManager.copyToClipboard(deviceId);
+    if (success) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } else {
+      Alert.alert('Device ID', deviceId);
+    }
+  };
 
   const handleActivate = async () => {
     if (!licenseKey.trim()) {
@@ -46,21 +79,25 @@ const LicenseActivationScreen: React.FC<Props> = ({
 
     setIsLoading(true);
     try {
+      const cleanKey = licenseKey.trim().toUpperCase();
       const success = await LicenseService.activateLicense(
-        licenseKey.trim().toUpperCase(),
+        cleanKey,
         user.id,
         classId
       );
 
       if (success) {
-        Alert.alert('Success', 'License activated successfully!');
+        Alert.alert('Success 🎉', `License activated successfully for Class ${classId}! Content is unlocked offline.`);
         if (onActivated) {
           onActivated();
         } else if (navigation) {
           navigation.replace('SubjectList', { classId });
         }
       } else {
-        Alert.alert('Error', 'Invalid or already used activation code.');
+        Alert.alert(
+          'Activation Failed',
+          'Invalid activation code or code does not match this device/class.\n\nPlease ensure you provided your Device ID to your distributor.'
+        );
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to activate license. Please try again.');
@@ -71,55 +108,104 @@ const LicenseActivationScreen: React.FC<Props> = ({
 
   return (
     <SafeAreaView style={styles.container}>
-      {navigation?.canGoBack && navigation.canGoBack() && (
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          <Ionicons name="arrow-back" size={24} color={COLORS.textPrimary} />
-        </TouchableOpacity>
-      )}
+          {navigation?.canGoBack && navigation.canGoBack() && (
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <Ionicons name="arrow-back" size={24} color={COLORS.textPrimary} />
+            </TouchableOpacity>
+          )}
 
-      <View style={styles.content}>
-        <View style={styles.iconContainer}>
-          <Text style={styles.icon}>🔐</Text>
-        </View>
+          <View style={styles.content}>
+            <View style={styles.iconContainer}>
+              <View style={styles.iconCircle}>
+                <Ionicons name="shield-checkmark" size={38} color={COLORS.primary} />
+              </View>
+            </View>
 
-        <Text style={styles.title}>Activate Your Learning</Text>
-        <Text style={styles.subtitle}>
-          Enter your activation code to unlock your purchased class content.
-        </Text>
+            <Text style={styles.title}>Activate Class {classId}</Text>
+            <Text style={styles.subtitle}>
+              Offline DRM Protected Learning Pack. Enter your hardware activation code to unlock full course content.
+            </Text>
 
-        <Input
-          label="Activation Code"
-          placeholder="XXXX-XXXX-XXXX-XXXX"
-          value={licenseKey}
-          onChangeText={setLicenseKey}
-          autoCapitalize="characters"
-          style={styles.input}
-        />
+            {/* Hardware Device ID Card */}
+            <View style={styles.deviceCard}>
+              <View style={styles.deviceCardHeader}>
+                <Ionicons name="hardware-chip-outline" size={18} color="#475569" style={{ marginRight: 6 }} />
+                <Text style={styles.deviceCardTitle}>Your Hardware Device ID</Text>
+              </View>
+              <Text style={styles.deviceCardSubtext}>
+                Share this ID with your school or distributor to receive your unique activation code:
+              </Text>
+              <View style={styles.deviceCodeRow}>
+                <Text style={styles.deviceCodeText} numberOfLines={1} ellipsizeMode="middle">
+                  {deviceId || 'Loading hardware ID...'}
+                </Text>
+                <TouchableOpacity
+                  style={[styles.copyButton, copied && styles.copyButtonActive]}
+                  onPress={handleCopyDeviceId}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons
+                    name={copied ? 'checkmark-circle' : 'copy-outline'}
+                    size={16}
+                    color={copied ? '#10B981' : '#2563EB'}
+                    style={{ marginRight: 4 }}
+                  />
+                  <Text style={[styles.copyButtonText, copied && styles.copyButtonTextActive]}>
+                    {copied ? 'Copied' : 'Copy ID'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
 
-        <Button
-          title={isLoading ? 'Activating...' : 'Activate'}
-          onPress={handleActivate}
-          disabled={isLoading || !licenseKey.trim()}
-          loading={isLoading}
-        />
+            {/* Activation Code Input */}
+            <Input
+              label="Activation Code"
+              placeholder="e.g. CL10-XXXX-XXXX-XXXX"
+              value={licenseKey}
+              onChangeText={(txt) => setLicenseKey(txt.toUpperCase())}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              style={styles.input}
+            />
 
-        {navigation?.canGoBack && navigation.canGoBack() && (
-          <TouchableOpacity
-            style={styles.cancelButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Text style={styles.cancelButtonText}>Go Back</Text>
-          </TouchableOpacity>
-        )}
+            <Button
+              title={isLoading ? 'Activating Offline Pack...' : 'Activate Content'}
+              onPress={handleActivate}
+              disabled={isLoading || !licenseKey.trim()}
+              loading={isLoading}
+            />
 
-        <Text style={styles.note}>
-          Your license will be securely stored on this device for offline access.
-        </Text>
-      </View>
+            {navigation?.canGoBack && navigation.canGoBack() && (
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => navigation.goBack()}
+              >
+                <Text style={styles.cancelButtonText}>Go Back</Text>
+              </TouchableOpacity>
+            )}
+
+            <View style={styles.offlineNoticeBox}>
+              <Ionicons name="lock-closed" size={14} color="#64748B" style={{ marginRight: 6 }} />
+              <Text style={styles.note}>
+                100% Offline Secure DRM. No internet connection required to activate or study.
+              </Text>
+            </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -129,35 +215,112 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 20,
+    paddingBottom: 30,
+  },
   backButton: {
-    paddingHorizontal: 16,
     paddingTop: 12,
     alignSelf: 'flex-start',
   },
   content: {
     flex: 1,
     justifyContent: 'center',
-    padding: 24,
+    paddingVertical: 10,
   },
   iconContainer: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
   },
-  icon: {
-    fontSize: 55,
+  iconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#EEF2FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#E0E7FF',
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
+    fontSize: 26,
+    fontWeight: '800',
     color: COLORS.textPrimary,
     textAlign: 'center',
   },
   subtitle: {
     color: COLORS.textSecondary,
     textAlign: 'center',
-    lineHeight: 22,
-    marginTop: 12,
-    marginBottom: 35,
+    lineHeight: 20,
+    fontSize: 14,
+    marginTop: 8,
+    marginBottom: 24,
+    paddingHorizontal: 12,
+  },
+  deviceCard: {
+    backgroundColor: '#F1F5F9',
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 22,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  deviceCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  deviceCardTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#334155',
+  },
+  deviceCardSubtext: {
+    fontSize: 12,
+    color: '#64748B',
+    lineHeight: 16,
+    marginBottom: 10,
+  },
+  deviceCodeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  deviceCodeText: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontWeight: '700',
+    color: '#1E293B',
+    marginRight: 8,
+  },
+  copyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EFF6FF',
+    borderRadius: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+  },
+  copyButtonActive: {
+    backgroundColor: '#ECFDF5',
+    borderColor: '#A7F3D0',
+  },
+  copyButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#2563EB',
+  },
+  copyButtonTextActive: {
+    color: '#10B981',
   },
   input: {
     marginBottom: 20,
@@ -172,12 +335,17 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '500',
   },
+  offlineNoticeBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 24,
+    paddingHorizontal: 16,
+  },
   note: {
-    color: COLORS.textSecondary,
-    textAlign: 'center',
+    color: '#64748B',
     fontSize: 12,
-    lineHeight: 18,
-    marginTop: 25,
+    lineHeight: 16,
   },
 });
 

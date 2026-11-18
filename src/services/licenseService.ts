@@ -2,6 +2,7 @@ import * as Crypto from 'expo-crypto';
 import { executeQuery } from '../database/database';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { secureContentManager } from '../utils/secureContentManager';
+import { CURRENT_CLIENT_CONFIG } from '../config/clientConfig';
 
 export interface License {
   id?: number;
@@ -50,6 +51,72 @@ export class LicenseService {
     return formatted.replace(/(.{4})/g, '$1-').replace(/-$/, '');
   };
 
+  static computeKeyMac = async (secret: string, payload: string): Promise<string> => {
+    const text = `${secret}:${payload}:${secret}`;
+    const hash = await Crypto.digestStringAsync(
+      Crypto.CryptoDigestAlgorithm.SHA256,
+      text
+    );
+    return hash.toUpperCase();
+  };
+
+  /**
+   * Cryptographically verify an offline license key against the device ID and client secrets.
+   */
+  static verifyOfflineLicenseKey = async (
+    rawKey: string,
+    deviceId: string,
+    targetClassId: number
+  ): Promise<{ valid: boolean; classId: number; isAllClasses: boolean; expiresAt: string | null }> => {
+    const normalized = rawKey.trim().toUpperCase().replace(/[^A-Z0-9-]/g, '');
+    const parts = normalized.split('-');
+
+    if (parts.length < 4) {
+      return { valid: false, classId: targetClassId, isAllClasses: false, expiresAt: null };
+    }
+
+    const classCode = parts[0];
+    const enteredMac = parts.slice(1).join('');
+
+    let keyClassId = targetClassId;
+    let isAll = false;
+
+    if (classCode === 'CALL') {
+      isAll = true;
+      keyClassId = 0;
+    } else if (classCode.startsWith('CL')) {
+      const parsed = parseInt(classCode.substring(2), 10);
+      if (!isNaN(parsed)) {
+        keyClassId = parsed;
+      }
+    }
+
+    // Class specific mismatch check
+    if (!isAll && keyClassId !== targetClassId) {
+      return { valid: false, classId: keyClassId, isAllClasses: false, expiresAt: null };
+    }
+
+    const normDevice = deviceId.trim().toLowerCase();
+    const clientId = CURRENT_CLIENT_CONFIG.clientId;
+    const clientSecret = CURRENT_CLIENT_CONFIG.clientSecret;
+    const masterSecret = CURRENT_CLIENT_CONFIG.masterSecret;
+
+    // 1. Check with client secret (lifetime)
+    const payloadLifetime = `${normDevice}|${classCode}|lifetime|${clientId}`;
+    const mac1 = await LicenseService.computeKeyMac(clientSecret, payloadLifetime);
+    if (mac1.substring(0, 12) === enteredMac) {
+      return { valid: true, classId: keyClassId, isAllClasses: isAll, expiresAt: null };
+    }
+
+    // 2. Check with master secret fallback
+    const mac2 = await LicenseService.computeKeyMac(masterSecret, payloadLifetime);
+    if (mac2.substring(0, 12) === enteredMac) {
+      return { valid: true, classId: keyClassId, isAllClasses: isAll, expiresAt: null };
+    }
+
+    return { valid: false, classId: keyClassId, isAllClasses: false, expiresAt: null };
+  };
+
   static activateLicense = async (
     licenseKey: string,
     userId: number,
@@ -57,30 +124,72 @@ export class LicenseService {
   ): Promise<boolean> => {
     try {
       const deviceId = await LicenseService.getDeviceId();
+      const cleanKey = licenseKey.trim().toUpperCase();
+
+      // Check if this class is allowed in this client build
+      if (!CURRENT_CLIENT_CONFIG.allowedClasses.includes(classId) && classId !== 0) {
+        console.warn(`Class ${classId} not permitted in client config ${CURRENT_CLIENT_CONFIG.clientId}`);
+        return false;
+      }
       
+      // 1. First check if a pre-seeded / existing database key matches
       const existing = await executeQuery(
         `SELECT * FROM licenses 
          WHERE license_key = ? 
-         AND class_id = ?
+         AND (class_id = ? OR class_id = 0)
          AND is_active = 1 
          AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)`,
-        [licenseKey, classId]
+        [cleanKey, classId]
       );
 
-      if (existing.length === 0) return false;
-      if (existing[0].user_id && existing[0].user_id !== userId) return false;
+      if (existing.length > 0) {
+        if (existing[0].user_id && existing[0].user_id !== userId) return false;
 
-      await executeQuery(
-        `UPDATE licenses 
-         SET user_id = ?, device_id = ?, activated_at = CURRENT_TIMESTAMP
-         WHERE license_key = ?`,
-        [userId, deviceId, licenseKey]
-      );
+        await executeQuery(
+          `UPDATE licenses 
+           SET user_id = ?, device_id = ?, activated_at = CURRENT_TIMESTAMP
+           WHERE license_key = ?`,
+          [userId, deviceId, cleanKey]
+        );
+
+        await AsyncStorage.setItem('active_license', JSON.stringify({
+          licenseKey: cleanKey,
+          userId,
+          classId,
+          activatedAt: new Date().toISOString()
+        }));
+
+        return true;
+      }
+
+      // 2. Cryptographic Offline Signature Verification
+      const verification = await LicenseService.verifyOfflineLicenseKey(cleanKey, deviceId, classId);
+      if (!verification.valid) {
+        return false;
+      }
+
+      // If valid, insert active license record(s) into database
+      if (verification.isAllClasses) {
+        // Unlock all classes 1 through 10
+        for (const c of CURRENT_CLIENT_CONFIG.allowedClasses) {
+          await executeQuery(
+            `INSERT OR REPLACE INTO licenses (license_key, user_id, class_id, device_id, activated_at, expires_at, is_active)
+             VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, NULL, 1)`,
+            [`${cleanKey}_C${c}`, userId, c, deviceId]
+          );
+        }
+      } else {
+        await executeQuery(
+          `INSERT OR REPLACE INTO licenses (license_key, user_id, class_id, device_id, activated_at, expires_at, is_active)
+           VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, ?, 1)`,
+          [cleanKey, userId, classId, deviceId, verification.expiresAt]
+        );
+      }
 
       await AsyncStorage.setItem('active_license', JSON.stringify({
-        licenseKey,
+        licenseKey: cleanKey,
         userId,
-        classId,
+        classId: verification.isAllClasses ? 0 : classId,
         activatedAt: new Date().toISOString()
       }));
 
@@ -141,12 +250,19 @@ export class LicenseService {
     classId: number
   ): Promise<boolean> => {
     try {
+      // 1. Verify class is permitted in this client-specific APK build
+      if (!CURRENT_CLIENT_CONFIG.allowedClasses.includes(classId)) {
+        return false;
+      }
+
+      // 2. Check for active license for this specific class or curriculum pass (class_id = 0)
       const result = await executeQuery(
-        `SELECT * FROM licenses
+        `SELECT id FROM licenses
          WHERE user_id = ?
-         AND class_id = ?
+         AND (class_id = ? OR class_id = 0)
          AND is_active = 1
-         AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)`,
+         AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
+         LIMIT 1`,
         [userId, classId]
       );
       return result.length > 0;

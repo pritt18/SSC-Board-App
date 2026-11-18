@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { executeQuery } from '../../database/database';
 import { useAuth } from '../../context/AuthContext';
 import { LearningStackParamList } from '../../navigation/navigationTypes';
+import { secureContentManager } from '../../utils/secureContentManager';
 
 type Props = NativeStackScreenProps<LearningStackParamList, 'PdfViewer'>;
 
@@ -42,6 +43,9 @@ const PdfViewerScreen: React.FC<Props> = ({ navigation, route }) => {
   const loadPdfs = async () => {
     try {
       setIsLoading(true);
+      // Ensure offline cache is warm
+      await secureContentManager.refreshFileList();
+
       const studentMedium = user?.medium || 'english';
       const pdfData = await executeQuery(
         `SELECT id, subject_id, title_english, description_english, pdf_url, sort_order 
@@ -136,7 +140,15 @@ const PdfViewerScreen: React.FC<Props> = ({ navigation, route }) => {
                 </View>
 
                 <View style={styles.pdfInfo}>
-                  <Text style={styles.pdfLabel}>Study Material</Text>
+                  <View style={styles.badgeRow}>
+                    <Text style={styles.pdfLabel}>Study Material</Text>
+                    {secureContentManager.isOfflinePdfCached(pdf.pdf_url, pdf.id) && (
+                      <View style={styles.offlineBadge}>
+                        <Ionicons name="flash" size={10} color="#059669" style={{ marginRight: 2 }} />
+                        <Text style={styles.offlineBadgeText}>Offline Ready</Text>
+                      </View>
+                    )}
+                  </View>
                   <Text style={styles.pdfTitle}>{pdf.title_english}</Text>
                   
                   {pdf.description_english && (
@@ -251,6 +263,26 @@ const styles = StyleSheet.create({
     color: COLORS.primary, 
     fontSize: 11, 
     fontWeight: '600' 
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  offlineBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  offlineBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#059669',
   },
   pdfTitle: { 
     color: COLORS.textPrimary, 

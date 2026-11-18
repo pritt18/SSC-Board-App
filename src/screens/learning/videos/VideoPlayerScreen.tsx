@@ -1637,7 +1637,17 @@ const VideoPlayerScreen: React.FC<Props> = ({ navigation, route }) => {
                     <Ionicons name="play-circle" size={28} color={COLORS.primary} />
                   </View>
                   <View style={styles.otherVideoInfo}>
-                    <Text style={styles.otherVideoTitle}>{video.title_english}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Text style={[styles.otherVideoTitle, { flex: 1, marginRight: 6 }]} numberOfLines={1}>
+                        {video.title_english}
+                      </Text>
+                      {secureContentManager.isOfflineVideoCached(video.video_url, video.id) && (
+                        <View style={styles.playlistOfflinePill}>
+                          <Ionicons name="flash" size={10} color="#059669" style={{ marginRight: 2 }} />
+                          <Text style={styles.playlistOfflinePillText}>Offline</Text>
+                        </View>
+                      )}
+                    </View>
                     {video.title_marathi && (
                       <Text style={styles.otherVideoMarathi}>{video.title_marathi}</Text>
                     )}
@@ -2376,6 +2386,21 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     fontSize: 14,
     fontWeight: '600',
+  },
+  playlistOfflinePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  playlistOfflinePillText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#059669',
   },
   otherVideoMarathi: {
     color: COLORS.primary,

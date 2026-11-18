@@ -18,6 +18,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { useLanguage } from '../../../context/LanguageContext';
 import { executeQuery } from '../../../database/database';
 import { COLORS } from '../../../constants/colors';
+import { secureContentManager } from '../../../utils/secureContentManager';
 
 const ProfileScreen: React.FC<{ navigation?: any }> = ({ navigation }) => {
   const { user, logout, updateUser } = useAuth();
@@ -28,6 +29,12 @@ const ProfileScreen: React.FC<{ navigation?: any }> = ({ navigation }) => {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showLanguageModal, setShowLanguageModal] = useState(false);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
+  const [showOfflineModal, setShowOfflineModal] = useState(false);
+
+  // Offline DRM stats state
+  const [offlineStats, setOfflineStats] = useState<any>(null);
+  const [scanningOffline, setScanningOffline] = useState(false);
+  const [copiedFp, setCopiedFp] = useState(false);
 
   // Edit profile form state
   const [fullName, setFullName] = useState(user?.full_name || '');
@@ -263,6 +270,47 @@ const ProfileScreen: React.FC<{ navigation?: any }> = ({ navigation }) => {
     }
   };
 
+  // Offline DRM stats handlers
+  const loadOfflineStats = async () => {
+    try {
+      const stats = await secureContentManager.getOfflineStats();
+      setOfflineStats(stats);
+    } catch (e) {
+      console.warn('Error loading offline stats:', e);
+    }
+  };
+
+  const handleOpenOfflineModal = async () => {
+    setShowOfflineModal(true);
+    await loadOfflineStats();
+  };
+
+  const handleRescanStorage = async () => {
+    setScanningOffline(true);
+    try {
+      await secureContentManager.refreshFileList();
+      const updated = await secureContentManager.getOfflineStats();
+      setOfflineStats(updated);
+      showToast(`Scan complete: ${updated.videoCount} videos, ${updated.pdfCount} PDFs found 📦`);
+    } catch (e) {
+      showToast('Failed to rescan storage.');
+    } finally {
+      setScanningOffline(false);
+    }
+  };
+
+  const handleCopyFingerprint = async () => {
+    if (!offlineStats?.deviceId) return;
+    const ok = await secureContentManager.copyToClipboard(offlineStats.deviceId);
+    if (ok) {
+      setCopiedFp(true);
+      setTimeout(() => setCopiedFp(false), 2500);
+      showToast('Hardware Device ID copied to clipboard 📋');
+    } else {
+      Alert.alert('Hardware Device ID', offlineStats.deviceId);
+    }
+  };
+
   // Logout Handler
   const handleLogout = () => {
     if (Platform.OS === 'web') {
@@ -419,6 +467,17 @@ const ProfileScreen: React.FC<{ navigation?: any }> = ({ navigation }) => {
               <View style={styles.menuTextBox}>
                 <Text style={styles.menuText}>Download Settings</Text>
                 <Text style={styles.menuSubText}>Wi-Fi settings & clear cached PDFs</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.menuItem} onPress={handleOpenOfflineModal} activeOpacity={0.7}>
+              <View style={[styles.menuIconBox, { backgroundColor: '#EEF2FF' }]}>
+                <Ionicons name="shield-checkmark-outline" size={20} color="#4F46E5" />
+              </View>
+              <View style={styles.menuTextBox}>
+                <Text style={styles.menuText}>Offline Storage & DRM</Text>
+                <Text style={styles.menuSubText}>Device ID, storage path & content scan</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
             </TouchableOpacity>
@@ -761,6 +820,131 @@ const ProfileScreen: React.FC<{ navigation?: any }> = ({ navigation }) => {
                 <Text style={styles.clearCacheBtnText}>Clear Cached Data</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ========================================================= */}
+      {/* 5. OFFLINE STORAGE & DRM STATUS MODAL */}
+      {/* ========================================================= */}
+      <Modal visible={showOfflineModal} transparent animationType="fade" onRequestClose={() => setShowOfflineModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { maxHeight: 580 }]}>
+            <View style={styles.modalHeader}>
+              <View style={styles.modalHeaderTitleBox}>
+                <Ionicons name="shield-checkmark" size={20} color="#4F46E5" style={{ marginRight: 8 }} />
+                <Text style={styles.modalTitle}>Offline Storage & DRM</Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowOfflineModal(false)}>
+                <Ionicons name="close" size={24} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} style={styles.modalBody}>
+              {/* DRM Engine Status Banner */}
+              <View style={styles.drmBanner}>
+                <View style={styles.drmBannerLeft}>
+                  <View style={styles.drmPulseDot} />
+                  <Text style={styles.drmBannerTitle}>DRM Stream Engine Active</Text>
+                </View>
+                <Text style={styles.drmBannerSub}>
+                  Port {offlineStats?.port || 'Dynamic'} • 127.0.0.1 (AES-256-CTR)
+                </Text>
+              </View>
+
+              {/* Hardware Device ID */}
+              <Text style={[styles.fieldLabel, { marginTop: 14 }]}>Hardware Device ID</Text>
+              <Text style={styles.menuSubText}>
+                Bound to this physical device. Give this ID to your distributor for offline license generation.
+              </Text>
+              <View style={styles.deviceRow}>
+                <Text style={styles.deviceText} numberOfLines={1} ellipsizeMode="middle">
+                  {offlineStats?.deviceId || 'Loading hardware ID...'}
+                </Text>
+                <TouchableOpacity
+                  style={[styles.drmCopyBtn, copiedFp && styles.drmCopyBtnActive]}
+                  onPress={handleCopyFingerprint}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons
+                    name={copiedFp ? 'checkmark' : 'copy-outline'}
+                    size={15}
+                    color={copiedFp ? '#10B981' : '#4F46E5'}
+                    style={{ marginRight: 4 }}
+                  />
+                  <Text style={[styles.drmCopyText, copiedFp && { color: '#10B981' }]}>
+                    {copiedFp ? 'Copied' : 'Copy'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Detected Offline Storage Path */}
+              <Text style={[styles.fieldLabel, { marginTop: 14 }]}>Active Offline Directory</Text>
+              <View style={styles.pathBox}>
+                <Ionicons name="folder-open-outline" size={16} color="#64748B" style={{ marginRight: 6 }} />
+                <Text style={styles.pathText} numberOfLines={2}>
+                  {offlineStats?.contentDir || '/sdcard/Download/SSCBoard/offline_content'}
+                </Text>
+              </View>
+
+              {/* Content Stats Grid */}
+              <View style={styles.statsGrid}>
+                <View style={styles.statCard}>
+                  <Ionicons name="videocam" size={20} color="#3B82F6" />
+                  <Text style={styles.statCount}>{offlineStats?.videoCount ?? 0}</Text>
+                  <Text style={styles.statLabel}>Videos (.enc)</Text>
+                </View>
+                <View style={styles.statCard}>
+                  <Ionicons name="document-text" size={20} color="#10B981" />
+                  <Text style={styles.statCount}>{offlineStats?.pdfCount ?? 0}</Text>
+                  <Text style={styles.statLabel}>PDF Books (.enc)</Text>
+                </View>
+                <View style={styles.statCard}>
+                  <Ionicons name="cube" size={20} color="#8B5CF6" />
+                  <Text style={styles.statCount}>{offlineStats?.totalFiles ?? 0}</Text>
+                  <Text style={styles.statLabel}>Total Packs</Text>
+                </View>
+              </View>
+
+              {/* Client Profile Edition */}
+              <View style={styles.clientProfileBox}>
+                <Text style={styles.clientProfileLabel}>Edition / Distributor:</Text>
+                <Text style={styles.clientProfileName}>{offlineStats?.clientName || 'SSC Board Learning App'}</Text>
+              </View>
+
+              {/* Action Buttons */}
+              <View style={styles.drmActionRow}>
+                <TouchableOpacity
+                  style={[styles.rescanBtn, scanningOffline && { opacity: 0.7 }]}
+                  onPress={handleRescanStorage}
+                  disabled={scanningOffline}
+                  activeOpacity={0.8}
+                >
+                  {scanningOffline ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 6 }} />
+                  ) : (
+                    <Ionicons name="refresh-outline" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
+                  )}
+                  <Text style={styles.rescanBtnText}>
+                    {scanningOffline ? 'Scanning...' : 'Rescan Storage'}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.activateBtn}
+                  onPress={() => {
+                    setShowOfflineModal(false);
+                    navigation?.navigate('LicenseActivation');
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="key-outline" size={18} color="#4F46E5" style={{ marginRight: 6 }} />
+                  <Text style={styles.activateBtnText}>Enter Code</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={{ height: 20 }} />
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -1220,6 +1404,171 @@ const styles = StyleSheet.create({
     color: '#EF4444',
     fontSize: 14,
     fontWeight: '600',
+  },
+  drmBanner: {
+    backgroundColor: '#EEF2FF',
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 6,
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+  },
+  drmBannerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  drmPulseDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#10B981',
+    marginRight: 6,
+  },
+  drmBannerTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#312E81',
+  },
+  drmBannerSub: {
+    fontSize: 12,
+    color: '#4338CA',
+    marginLeft: 14,
+  },
+  deviceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginTop: 6,
+  },
+  deviceText: {
+    flex: 1,
+    fontSize: 12,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontWeight: '700',
+    color: '#1E293B',
+    marginRight: 6,
+  },
+  drmCopyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EEF2FF',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+  },
+  drmCopyBtnActive: {
+    backgroundColor: '#ECFDF5',
+    borderColor: '#A7F3D0',
+  },
+  drmCopyText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#4F46E5',
+  },
+  pathBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 6,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  pathText: {
+    flex: 1,
+    fontSize: 12,
+    color: '#475569',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 16,
+    gap: 8,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    padding: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  statCount: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginTop: 4,
+  },
+  statLabel: {
+    fontSize: 10,
+    color: '#64748B',
+    textAlign: 'center',
+    marginTop: 2,
+    fontWeight: '500',
+  },
+  clientProfileBox: {
+    backgroundColor: '#F1F5F9',
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 14,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  clientProfileLabel: {
+    fontSize: 12,
+    color: '#64748B',
+  },
+  clientProfileName: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#1E293B',
+  },
+  drmActionRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 16,
+  },
+  rescanBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    backgroundColor: '#4F46E5',
+    borderRadius: 8,
+    paddingVertical: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rescanBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  activateBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    backgroundColor: '#EEF2FF',
+    borderRadius: 8,
+    paddingVertical: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+  },
+  activateBtnText: {
+    color: '#4F46E5',
+    fontSize: 13,
+    fontWeight: '700',
   },
 });
 

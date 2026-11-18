@@ -249,6 +249,26 @@ class SecureContentModule(reactContext: ReactApplicationContext) :
     }
 
     /**
+     * Copy text to the Android system clipboard safely.
+     */
+    @ReactMethod
+    fun copyToClipboard(text: String, promise: Promise) {
+        try {
+            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+            if (clipboard != null) {
+                val clip = android.content.ClipData.newPlainText("SSCBoard", text)
+                clipboard.setPrimaryClip(clip)
+                promise.resolve(true)
+            } else {
+                promise.resolve(false)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error copying to clipboard", e)
+            promise.reject("CLIPBOARD_ERROR", e.message, e)
+        }
+    }
+
+    /**
      * In-memory decryption for small files (e.g. manifests or small text assets)
      * Returns Base64 string of the decrypted plaintext without writing to disk.
      */
